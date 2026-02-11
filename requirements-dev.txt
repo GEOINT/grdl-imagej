@@ -1,0 +1,14 @@
+# grdl-imagej development dependencies
+
+# Include core dependencies
+-r requirements.txt
+
+# Testing framework
+pytest>=7.0.0
+pytest-cov>=3.0.0
+pytest-benchmark>=4.0.0
+
+# Code quality
+black>=22.0.0
+mypy>=0.950
+ruff>=0.4.0

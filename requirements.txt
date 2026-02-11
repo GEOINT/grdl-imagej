@@ -1,0 +1,10 @@
+# grdl-imagej dependencies
+
+# GRDL framework (base classes, versioning, parameter system)
+grdl>=0.1.0
+
+# Core numerical computing
+numpy>=1.20.0
+
+# Scientific computing (ndimage filters used by background, binary, edges, filters, find_maxima, threshold)
+scipy>=1.7.0
