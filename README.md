@@ -24,14 +24,18 @@ pip install -e ".[dev]"
 
 ## Dependencies
 
-- **grdl** >= 0.1.0 (base classes, versioning, parameter system)
+- **grdl** >= 0.1.0 (base classes, versioning, `Annotated` parameter system, vocabulary enums)
 - **numpy** >= 1.20.0
 - **scipy** >= 1.7.0
 
 ## Components (22 processors)
 
 All processors inherit from `ImageTransform` and follow the same pattern:
-instantiate with parameters, call `.apply(image)`.
+instantiate with parameters, call `.apply(image)`. Every processor carries
+`@processor_version` and `@processor_tags` metadata decorators, and declares
+its tunable parameters via `Annotated` type hints with `Range`, `Options`,
+and `Desc` constraint markers from `grdl.image_processing.params`. This
+metadata enables grdl-runtime catalog discovery and grdk GUI auto-configuration.
 
 ### Process > Filters
 

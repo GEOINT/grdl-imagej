@@ -14,6 +14,8 @@ packaged as a GRDL extension. All processors inherit from
 - **Parameters** via `typing.Annotated` with `Range`, `Options`, `Desc` from `grdl.image_processing.params`
 - **Categories** from `grdl.vocabulary.ProcessorCategory`
 
+**Every processor in grdl-imagej must have all three metadata annotations** (`@processor_version`, `@processor_tags`, and `Annotated` parameter declarations). This metadata drives grdl-runtime catalog discovery and grdk widget UI generation. See the Processor Pattern below.
+
 ## Directory Layout
 
 ```
@@ -83,21 +85,32 @@ YYYY-MM-DD
 
 ### Processor Pattern
 
+All processors follow this template. The three metadata annotations are **required** — they make
+the processor visible to grdl-runtime's catalog and configurable in grdk's widget UI:
+
 ```python
+from typing import Annotated, Any
+import numpy as np
 from grdl.image_processing.base import ImageTransform
 from grdl.image_processing.versioning import processor_version, processor_tags
+from grdl.image_processing.params import Range, Options, Desc
 from grdl.vocabulary import ProcessorCategory as PC, ImageModality as IM
 
 @processor_tags(modalities=[IM.PAN, IM.SAR, IM.MSI], category=PC.FILTERS)
 @processor_version('1.54j')
 class MyFilter(ImageTransform):
+    # Annotated params → auto-generated __init__, introspectable by grdk
     param: Annotated[float, Range(min=0.1), Desc('...')] = 2.0
 
     def apply(self, source: np.ndarray, **kwargs: Any) -> np.ndarray:
-        params = self._resolve_params(kwargs)
-        # implementation
+        params = self._resolve_params(kwargs)  # merge + validate
+        # implementation using params['param']
         return result
 ```
+
+- `@processor_version`: stamps `__processor_version__` — bump when algorithm changes.
+- `@processor_tags`: stamps `__processor_tags__` — modalities, category, description for catalog filtering.
+- `Annotated[type, Range/Options, Desc]`: declares tunable parameters with constraints that are validated at init and at runtime via `_resolve_params()`.
 
 ## Testing
 
