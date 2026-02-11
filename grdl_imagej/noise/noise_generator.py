@@ -137,12 +137,17 @@ class NoiseGenerator(ImageTransform):
         elif noise_type == 'salt_pepper':
             result = image.copy()
             density = p['density']
-            # Salt (max value)
+            # Determine salt/pepper values: use image range if dynamic,
+            # else fall back to 0/255 for flat images
+            lo, hi = image.min(), image.max()
+            if hi - lo < 1e-10:
+                lo, hi = 0.0, 255.0
+            # Salt (high value)
             salt_mask = rng.random(image.shape) < density / 2
-            result[salt_mask] = image.max() if image.size > 0 else 255.0
-            # Pepper (min value)
+            result[salt_mask] = hi
+            # Pepper (low value)
             pepper_mask = rng.random(image.shape) < density / 2
-            result[pepper_mask] = image.min() if image.size > 0 else 0.0
+            result[pepper_mask] = lo
             return result
 
         else:  # speckle

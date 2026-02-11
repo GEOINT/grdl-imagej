@@ -122,9 +122,7 @@ class PhaseCorrelation(ImageTransform):
     window: Annotated[str, Options('hann', 'blackman', 'none'),
                        Desc('Apodization window')] = 'hann'
 
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self.last_shift = (0.0, 0.0)
+    last_shift: tuple = (0.0, 0.0)
 
     def apply(self, source: np.ndarray, **kwargs: Any) -> np.ndarray:
         """Compute phase correlation between source and reference.

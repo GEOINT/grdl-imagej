@@ -16,7 +16,7 @@ location, parameter spec, complexity estimate, and academic references.
 
 ---
 
-## Already Ported (22 processors — excluded from all candidates below)
+## Already Ported (42 processors — excluded from all candidates below)
 
 | # | Processor | Category | Module |
 |---|-----------|----------|--------|
@@ -42,6 +42,26 @@ location, parameter spec, complexity estimate, and academic references.
 | 20 | DistanceTransform | binary | `grdl_imagej.binary` |
 | 21 | Skeletonize | binary | `grdl_imagej.binary` |
 | 22 | AnisotropicDiffusion | noise | `grdl_imagej.noise` |
+| 23 | BilateralFilter | noise | `grdl_imagej.noise` |
+| 24 | DifferenceOfGaussians | filters | `grdl_imagej.filters` |
+| 25 | GaborFilterBank | filters | `grdl_imagej.filters` |
+| 26 | LocalBinaryPatterns | filters | `grdl_imagej.filters` |
+| 27 | HarrisCornerDetector | edges | `grdl_imagej.edges` |
+| 28 | PhaseCorrelation | fft | `grdl_imagej.fft` |
+| 29 | NoiseGenerator | noise | `grdl_imagej.noise` |
+| 30 | ColorSpaceConverter | enhance | `grdl_imagej.enhance` |
+| 31 | Shadows | filters | `grdl_imagej.filters` |
+| 32 | EntropyFilter | filters | `grdl_imagej.filters` |
+| 33 | VarianceFilter | filters | `grdl_imagej.filters` |
+| 34 | KuwaharaFilter | filters | `grdl_imagej.filters` |
+| 35 | BinaryFillHoles | binary | `grdl_imagej.binary` |
+| 36 | BinaryOutline | binary | `grdl_imagej.binary` |
+| 37 | PseudoFlatField | background | `grdl_imagej.background` |
+| 38 | Smooth | filters | `grdl_imagej.filters` |
+| 39 | Sharpen | filters | `grdl_imagej.filters` |
+| 40 | MathOperations | math | `grdl_imagej.math` |
+| 41 | TypeConverter | math | `grdl_imagej.math` |
+| 42 | WhiteBalance | enhance | `grdl_imagej.enhance` |
 
 ---
 
@@ -61,16 +81,16 @@ Each ported processor must:
 
 ## Priority Tiers
 
-- **Tier 1 — High Value / Low Effort:** Directly useful for GEOINT workflows, low porting complexity. Do these first.
+- **Tier 1 — High Value / Low Effort:** ~~Directly useful for GEOINT workflows, low porting complexity. Do these first.~~ **COMPLETE (20/20 ported 2026-02-11)**
 - **Tier 2 — High Value / Medium Effort:** Important algorithms that require more implementation work.
 - **Tier 3 — Specialized:** Useful for specific domains or as building blocks for higher-level tools.
 - **Tier 4 — Advanced / High Effort:** Academically important, complex implementations.
 
 ---
 
-## Tier 1 — High Value / Low Effort
+## Tier 1 — High Value / Low Effort (COMPLETE — all 20 ported 2026-02-11)
 
-### T1-01. Bilateral Filter
+### ~~T1-01. Bilateral Filter~~ DONE
 - **Category:** `noise` (denoising)
 - **Type:** ImageTransform
 - **Description:** Edge-preserving smoothing filter combining a spatial Gaussian kernel with a range (intensity) Gaussian kernel. Smooths homogeneous regions while preserving edges. Critical for SAR speckle reduction and pre-processing.
@@ -85,7 +105,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy (gaussian_filter for comparison)
 - **References:** Tomasi & Manduchi, "Bilateral Filtering for Gray and Color Images", ICCV 1998.
 
-### T1-02. Difference of Gaussians (DoG)
+### ~~T1-02. Difference of Gaussians (DoG)~~ DONE
 - **Category:** `filters`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Subtracts two Gaussian-blurred images at different scales. Approximates Laplacian of Gaussian (LoG). Key building block for blob detection and scale-space analysis in feature extraction pipelines.
@@ -99,7 +119,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `GaussianBlur`
 - **References:** Marr & Hildreth, "Theory of Edge Detection", Proc. Royal Society London B, 207, 1980.
 
-### T1-03. Gabor Filter Bank
+### ~~T1-03. Gabor Filter Bank~~ DONE
 - **Category:** `filters` (texture)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Applies a bank of Gabor filters at multiple orientations and frequencies. Each filter is a Gaussian-modulated sinusoidal plane wave sensitive to a specific spatial frequency and orientation. Essential for texture classification in land cover mapping.
@@ -116,7 +136,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy.ndimage.convolve
 - **References:** Jain & Farrokhnia, "Unsupervised Texture Segmentation Using Gabor Filters", Pattern Recognition, 24(12), 1991.
 
-### T1-04. Local Binary Patterns (LBP)
+### ~~T1-04. Local Binary Patterns (LBP)~~ DONE
 - **Category:** `filters` (texture)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Encodes local texture micro-patterns by comparing each pixel to its circular neighborhood, producing binary codes. Variants include uniform LBP and rotation-invariant LBP. Powerful texture descriptor for terrain classification.
@@ -131,7 +151,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** Ojala, Pietikainen & Maenpaa, "Multiresolution Gray-Scale and Rotation Invariant Texture Classification with Local Binary Patterns", IEEE PAMI, 24(7), 2002.
 
-### T1-05. Harris Corner Detection
+### ~~T1-05. Harris Corner Detection~~ DONE
 - **Category:** `edges` (feature detection)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Detects corner points where the image gradient has significant variation in multiple directions. Computes structure tensor and derives corner response function with non-maximum suppression. Useful for feature matching in co-registration.
@@ -147,7 +167,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy.ndimage (gaussian_filter)
 - **References:** Harris & Stephens, "A Combined Corner and Edge Detector", Alvey Vision Conference, 1988.
 
-### T1-06. Phase Correlation
+### ~~T1-06. Phase Correlation~~ DONE
 - **Category:** `fft` (registration)
 - **Type:** ImageTransform
 - **Description:** Estimates translational shift between two images using normalized cross-power spectrum in frequency domain. Sub-pixel accurate, very fast via FFT, robust to intensity differences. Critical for SAR/EO image co-registration.
@@ -162,7 +182,7 @@ Each ported processor must:
 - **Dependencies:** numpy (np.fft)
 - **References:** Kuglin & Hines, "The Phase Correlation Image Alignment Method", IEEE Conf. Cybernetics & Society, 1975. Guizar-Sicairos et al., "Efficient subpixel image registration algorithms", Optics Letters, 33(2), 2008.
 
-### T1-07. Noise Generator
+### ~~T1-07. Noise Generator~~ DONE
 - **Category:** `noise`
 - **Type:** ImageTransform
 - **Description:** Adds synthetic noise to images: Gaussian, Poisson (shot noise), salt-and-pepper, and speckle (multiplicative). Essential for testing denoising algorithms and data augmentation.
@@ -178,7 +198,7 @@ Each ported processor must:
 - **Dependencies:** numpy (np.random.Generator)
 - **References:** Standard statistical noise models.
 
-### T1-08. Color Space Converter
+### ~~T1-08. Color Space Converter~~ DONE
 - **Category:** `enhance` (color)
 - **Type:** ImageTransform
 - **Description:** Converts between color spaces: RGB ↔ HSB(HSV), CIE L\*a\*b\*, YCbCr. Useful for color-based segmentation and analysis where perceptual (Lab) or luminance-chrominance spaces are advantageous.
@@ -193,7 +213,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** CIE (1976); Poynton, "Digital Video and HDTV", Morgan Kaufmann, 2003.
 
-### T1-09. Shadows (Emboss)
+### ~~T1-09. Shadows (Emboss)~~ DONE
 - **Category:** `filters`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Directional shadow/emboss effects using directional derivative kernels. Eight directional options (N, NE, E, SE, S, SW, W, NW). Useful for terrain feature enhancement in DEM-derived imagery.
@@ -207,7 +227,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `Convolver`
 - **References:** ImageJ source code (public domain).
 
-### T1-10. Entropy Filter (Local Entropy)
+### ~~T1-10. Entropy Filter (Local Entropy)~~ DONE
 - **Category:** `filters` (texture)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Computes local Shannon entropy within a sliding window. Homogeneous regions have low entropy; textured/edge regions have high entropy. Useful as a texture feature for land cover classification.
@@ -221,7 +241,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy.ndimage (generic_filter)
 - **References:** Shannon, "A Mathematical Theory of Communication", Bell System Technical Journal, 27(3), 1948.
 
-### T1-11. Variance / Std Dev Filter
+### ~~T1-11. Variance / Std Dev Filter~~ DONE
 - **Category:** `filters`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Computes local variance or standard deviation in a sliding window. Produces texture/variability maps for detecting change regions, noise estimation, and adaptive processing.
@@ -235,7 +255,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy.ndimage
 - **References:** Standard statistical filtering.
 
-### T1-12. Kuwahara Filter
+### ~~T1-12. Kuwahara Filter~~ DONE
 - **Category:** `filters`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Edge-preserving smoothing that divides each pixel's neighborhood into four overlapping quadrants, computes mean and variance of each, assigns pixel the mean of the quadrant with minimum variance. Produces smooth regions with sharp edges.
@@ -248,7 +268,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** Kuwahara et al., "Processing of RI-angiocardiographic images", Digital Processing of Biomedical Images, Plenum Press, 1976.
 
-### T1-13. BinaryFillHoles
+### ~~T1-13. BinaryFillHoles~~ DONE
 - **Category:** `binary`
 - **Type:** ImageTransform
 - **Description:** Fills interior holes in binary objects by flood-filling background from image edges and inverting. Part of ImageJ's Process → Binary → Fill Holes.
@@ -261,7 +281,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy.ndimage (binary_fill_holes for reference)
 - **References:** ImageJ source code (public domain).
 
-### T1-14. BinaryOutline
+### ~~T1-14. BinaryOutline~~ DONE
 - **Category:** `binary`
 - **Type:** ImageTransform
 - **Description:** Reduces binary objects to 1-pixel-wide outlines by removing interior pixels fully surrounded by foreground. Express as `original - erode(original)`.
@@ -274,7 +294,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `MorphologicalFilter`
 - **References:** ImageJ source code (public domain).
 
-### T1-15. Pseudo Flat-Field Correction
+### ~~T1-15. Pseudo Flat-Field Correction~~ DONE
 - **Category:** `background`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Corrects uneven illumination (vignetting, shading) by dividing image by a heavily blurred version of itself. Simpler than rolling ball for illumination normalization.
@@ -288,7 +308,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `GaussianBlur`
 - **References:** Model, "Intensity calibration and flat-field correction for fluorescence microscopes", Current Protocols in Cytometry, 2001.
 
-### T1-16. Smooth (Mean Filter)
+### ~~T1-16. Smooth (Mean Filter)~~ DONE
 - **Category:** `filters`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Fixed 3×3 mean filter for simple noise reduction. ImageJ's "Smooth" command, distinct from configurable-radius mean in RankFilters.
@@ -300,7 +320,7 @@ Each ported processor must:
 - **Dependencies:** scipy.ndimage (uniform_filter)
 - **References:** ImageJ source code (public domain).
 
-### T1-17. Sharpen (Laplacian)
+### ~~T1-17. Sharpen (Laplacian)~~ DONE
 - **Category:** `filters`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Fixed 3×3 Laplacian-based sharpening kernel. ImageJ's "Sharpen" command, distinct from configurable UnsharpMask.
@@ -312,7 +332,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `Convolver`
 - **References:** ImageJ source code (public domain).
 
-### T1-18. MathOperations (Per-pixel Math)
+### ~~T1-18. MathOperations (Per-pixel Math)~~ DONE
 - **Category:** `math`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Per-pixel mathematical operations: add, multiply, min, max, log, exp, sqrt, abs, reciprocal, square, NaN replacement. Process → Math submenu.
@@ -327,7 +347,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** ImageJ source code (public domain).
 
-### T1-19. TypeConverter
+### ~~T1-19. TypeConverter~~ DONE
 - **Category:** `math`
 - **Type:** ImageTransform
 - **Description:** Converts images between data types (uint8, uint16, float32) with configurable scaling, clamping, and normalization. Image → Type conversions.
@@ -342,7 +362,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** ImageJ source code (public domain).
 
-### T1-20. White Balance / Color Normalization
+### ~~T1-20. White Balance / Color Normalization~~ DONE
 - **Category:** `enhance` (color)
 - **Type:** ImageTransform
 - **Description:** Normalizes color balance using gray-world, white-patch (Retinex), or percentile methods. Corrects illumination color cast for consistent color representation in multi-temporal analysis.

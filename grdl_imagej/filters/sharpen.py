@@ -47,13 +47,13 @@ from grdl.image_processing.base import ImageTransform
 from grdl.image_processing.versioning import processor_version, processor_tags
 from grdl.vocabulary import ImageModality as IM, ProcessorCategory as PC
 
-# ImageJ's sharpen kernel: center=12, edges=-2, corners=-1, sum=0+12=12
-# Normalized by /12 to preserve overall brightness (unit DC gain).
+# ImageJ's sharpen kernel: center=12, all neighbors=-1, sum=4.
+# Normalized by /4 for unit DC gain (flat regions are preserved).
 _SHARPEN_KERNEL = np.array([
-    [-1, -2, -1],
-    [-2, 12, -2],
-    [-1, -2, -1],
-], dtype=np.float64) / 12.0
+    [-1, -1, -1],
+    [-1, 12, -1],
+    [-1, -1, -1],
+], dtype=np.float64) / 4.0
 
 
 @processor_tags(modalities=[IM.SAR, IM.PAN, IM.EO, IM.MSI, IM.HSI, IM.SWIR, IM.MWIR, IM.LWIR],
@@ -68,8 +68,8 @@ class Sharpen(ImageTransform):
     Notes
     -----
     Port of ``ij/process/ImageProcessor.java`` ``sharpen()`` from
-    ImageJ 1.54j (public domain). The kernel ``[[-1,-2,-1],[-2,12,-2],
-    [-1,-2,-1]] / 12`` has unit DC gain (sum of weights = 1) so that
+    ImageJ 1.54j (public domain). The kernel ``[[-1,-1,-1],[-1,12,-1],
+    [-1,-1,-1]] / 4`` has unit DC gain (sum of weights = 1) so that
     flat regions are preserved. High-frequency detail is amplified.
 
     For configurable sharpening, use ``UnsharpMask``.

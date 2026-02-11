@@ -2048,7 +2048,7 @@ class TestModuleExports:
     def test_all_list_matches_init(self):
         """__all__ in grdl_imagej/__init__.py should have 22 entries."""
         import grdl_imagej as ij_module
-        assert len(ij_module.__all__) == 22
+        assert len(ij_module.__all__) == 42
 
 
 # ============================================================================
@@ -2078,9 +2078,990 @@ class TestModuleExports:
     ('DistanceTransform', '1.54j'),
     ('Skeletonize', '1.54j'),
     ('AnisotropicDiffusion', '2.0.0'),
+    ('DifferenceOfGaussians', '1.0.0'),
+    ('Shadows', '1.54j'),
+    ('Smooth', '1.54j'),
+    ('Sharpen', '1.54j'),
+    ('VarianceFilter', '1.0.0'),
+    ('EntropyFilter', '1.0.0'),
+    ('KuwaharaFilter', '1.0.0'),
+    ('LocalBinaryPatterns', '1.0.0'),
+    ('GaborFilterBank', '1.0.0'),
+    ('BinaryOutline', '1.54j'),
+    ('BinaryFillHoles', '1.54j'),
+    ('PseudoFlatField', '1.0.0'),
+    ('NoiseGenerator', '1.54j'),
+    ('BilateralFilter', '1.0.0'),
+    ('MathOperations', '1.54j'),
+    ('TypeConverter', '1.54j'),
+    ('HarrisCornerDetector', '1.0.0'),
+    ('PhaseCorrelation', '1.0.0'),
+    ('ColorSpaceConverter', '1.54j'),
+    ('WhiteBalance', '1.0.0'),
 ])
 def test_imagej_version_attribute(class_name, expected_version):
     """All ImageJ components have correct __processor_version__."""
     import grdl_imagej as ij
     cls = getattr(ij, class_name)
     assert cls.__processor_version__ == expected_version
+
+
+# ============================================================================
+# DifferenceOfGaussians Tests
+# ============================================================================
+
+class TestDifferenceOfGaussians:
+    """Tests for Difference of Gaussians."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import DifferenceOfGaussians
+        dog = DifferenceOfGaussians(sigma1=1.0, sigma2=3.0)
+        image = np.random.RandomState(42).rand(50, 50) * 200
+        result = dog.apply(image)
+        assert result.shape == (50, 50)
+        assert result.dtype == np.float64
+
+    def test_flat_image_zero_response(self):
+        """DoG of a flat image should be near zero everywhere."""
+        from grdl_imagej import DifferenceOfGaussians
+        dog = DifferenceOfGaussians(sigma1=1.0, sigma2=3.0)
+        flat = np.full((40, 40), 100.0)
+        result = dog.apply(flat)
+        np.testing.assert_allclose(result, 0.0, atol=1e-10)
+
+    def test_detects_blob(self):
+        """DoG should have strong response at a bright blob."""
+        from grdl_imagej import DifferenceOfGaussians
+        dog = DifferenceOfGaussians(sigma1=1.0, sigma2=4.0)
+        image = np.zeros((50, 50))
+        image[23:28, 23:28] = 200.0
+        result = dog.apply(image)
+        # Strong positive response near center of blob
+        assert result[25, 25] > 10.0
+
+    def test_swaps_sigmas_if_needed(self):
+        """sigma1 > sigma2 should still work (auto-swap)."""
+        from grdl_imagej import DifferenceOfGaussians
+        dog = DifferenceOfGaussians(sigma1=5.0, sigma2=1.0)
+        image = np.random.RandomState(0).rand(30, 30) * 200
+        result = dog.apply(image)
+        assert result.shape == (30, 30)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import DifferenceOfGaussians
+        dog = DifferenceOfGaussians()
+        with pytest.raises(ValueError, match="2D"):
+            dog.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# Shadows Tests
+# ============================================================================
+
+class TestShadows:
+    """Tests for Shadows (Emboss)."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import Shadows
+        s = Shadows(direction='SE')
+        image = np.random.RandomState(42).rand(40, 40) * 200
+        result = s.apply(image)
+        assert result.shape == (40, 40)
+        assert result.dtype == np.float64
+
+    def test_flat_image_constant(self):
+        """Flat image should give pixel_value + offset (no gradient)."""
+        from grdl_imagej import Shadows
+        s = Shadows(direction='N', offset=128.0)
+        flat = np.full((30, 30), 100.0)
+        result = s.apply(flat)
+        # Kernel sum=1, so convolution of flat=100 gives 100, plus offset=128
+        np.testing.assert_allclose(result[5:-5, 5:-5], 228.0, atol=0.01)
+
+    def test_all_directions_run(self):
+        from grdl_imagej import Shadows
+        image = np.random.RandomState(0).rand(30, 30) * 200
+        for direction in ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']:
+            s = Shadows(direction=direction)
+            result = s.apply(image)
+            assert result.shape == (30, 30), f"Failed for {direction}"
+
+    def test_opposite_directions_differ(self):
+        """N and S emboss should produce opposite gradients."""
+        from grdl_imagej import Shadows
+        image = np.zeros((40, 40))
+        image[:20, :] = 200.0  # horizontal edge
+        n = Shadows(direction='N', offset=0.0).apply(image)
+        s = Shadows(direction='S', offset=0.0).apply(image)
+        # Opposite directions → opposite signs at edge
+        assert np.sign(n[20, 20]) != np.sign(s[20, 20]) or abs(n[20, 20]) < 0.01
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import Shadows
+        s = Shadows()
+        with pytest.raises(ValueError, match="2D"):
+            s.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# Smooth Tests
+# ============================================================================
+
+class TestSmooth:
+    """Tests for Smooth (Mean Filter)."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import Smooth
+        s = Smooth()
+        result = s.apply(np.ones((30, 30), dtype=np.uint8) * 100)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_flat_image_unchanged(self):
+        from grdl_imagej import Smooth
+        s = Smooth()
+        flat = np.full((40, 40), 50.0)
+        result = s.apply(flat)
+        np.testing.assert_allclose(result, 50.0, atol=0.01)
+
+    def test_reduces_noise(self):
+        """Smoothing should reduce the standard deviation of noise."""
+        from grdl_imagej import Smooth
+        s = Smooth()
+        rng = np.random.RandomState(42)
+        noisy = np.full((50, 50), 100.0) + rng.randn(50, 50) * 20
+        result = s.apply(noisy)
+        assert result.std() < noisy.std()
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import Smooth
+        s = Smooth()
+        with pytest.raises(ValueError, match="2D"):
+            s.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# Sharpen Tests
+# ============================================================================
+
+class TestSharpen:
+    """Tests for Sharpen (Laplacian)."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import Sharpen
+        s = Sharpen()
+        result = s.apply(np.ones((30, 30), dtype=np.uint8) * 100)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_flat_image_unchanged(self):
+        from grdl_imagej import Sharpen
+        s = Sharpen()
+        flat = np.full((40, 40), 128.0)
+        result = s.apply(flat)
+        np.testing.assert_allclose(result[5:-5, 5:-5], 128.0, atol=0.01)
+
+    def test_sharpens_edge(self):
+        """Should increase gradient at step edges."""
+        from grdl_imagej import Sharpen
+        s = Sharpen()
+        image = np.zeros((40, 80))
+        image[:, 40:] = 200.0
+        result = s.apply(image)
+        orig_grad = np.abs(np.diff(image[20, :]))
+        sharp_grad = np.abs(np.diff(result[20, :]))
+        assert sharp_grad.max() >= orig_grad.max()
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import Sharpen
+        s = Sharpen()
+        with pytest.raises(ValueError, match="2D"):
+            s.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# VarianceFilter Tests
+# ============================================================================
+
+class TestVarianceFilter:
+    """Tests for Variance / Std Dev Filter."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import VarianceFilter
+        vf = VarianceFilter(radius=3)
+        image = np.random.RandomState(42).rand(50, 50) * 200
+        result = vf.apply(image)
+        assert result.shape == (50, 50)
+        assert result.dtype == np.float64
+
+    def test_flat_image_zero_variance(self):
+        from grdl_imagej import VarianceFilter
+        vf = VarianceFilter(radius=3, output='variance')
+        flat = np.full((40, 40), 100.0)
+        result = vf.apply(flat)
+        np.testing.assert_allclose(result, 0.0, atol=1e-10)
+
+    def test_std_dev_nonnegative(self):
+        from grdl_imagej import VarianceFilter
+        vf = VarianceFilter(radius=3, output='std_dev')
+        image = np.random.RandomState(42).rand(50, 50) * 200
+        result = vf.apply(image)
+        assert np.all(result >= 0.0)
+
+    def test_variance_vs_std_dev(self):
+        """Std dev should be sqrt of variance."""
+        from grdl_imagej import VarianceFilter
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        var_result = VarianceFilter(radius=3, output='variance').apply(image)
+        std_result = VarianceFilter(radius=3, output='std_dev').apply(image)
+        np.testing.assert_allclose(std_result, np.sqrt(var_result), atol=1e-10)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import VarianceFilter
+        vf = VarianceFilter()
+        with pytest.raises(ValueError, match="2D"):
+            vf.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# BinaryOutline Tests
+# ============================================================================
+
+class TestBinaryOutline:
+    """Tests for BinaryOutline."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import BinaryOutline
+        bo = BinaryOutline()
+        image = np.zeros((30, 30))
+        image[10:20, 10:20] = 1.0
+        result = bo.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_binary_output(self):
+        from grdl_imagej import BinaryOutline
+        bo = BinaryOutline()
+        image = np.zeros((30, 30))
+        image[10:20, 10:20] = 1.0
+        result = bo.apply(image)
+        unique = set(np.unique(result))
+        assert unique.issubset({0.0, 1.0})
+
+    def test_outline_of_square(self):
+        """Outline should have fewer foreground pixels than original."""
+        from grdl_imagej import BinaryOutline
+        bo = BinaryOutline(connectivity=4)
+        image = np.zeros((30, 30))
+        image[5:25, 5:25] = 1.0
+        result = bo.apply(image)
+        assert result.sum() < image.sum()
+        assert result.sum() > 0  # Outline is not empty
+
+    def test_interior_removed(self):
+        """Interior of large solid object should be zero."""
+        from grdl_imagej import BinaryOutline
+        bo = BinaryOutline(connectivity=4)
+        image = np.zeros((40, 40))
+        image[5:35, 5:35] = 1.0
+        result = bo.apply(image)
+        # Center should be zero (interior)
+        assert result[20, 20] == 0.0
+
+    def test_empty_image(self):
+        from grdl_imagej import BinaryOutline
+        bo = BinaryOutline()
+        result = bo.apply(np.zeros((20, 20)))
+        assert result.sum() == 0.0
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import BinaryOutline
+        bo = BinaryOutline()
+        with pytest.raises(ValueError, match="2D"):
+            bo.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# BinaryFillHoles Tests
+# ============================================================================
+
+class TestBinaryFillHoles:
+    """Tests for BinaryFillHoles."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import BinaryFillHoles
+        bfh = BinaryFillHoles()
+        image = np.zeros((30, 30))
+        image[5:25, 5:25] = 1.0
+        result = bfh.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_fills_interior_hole(self):
+        """A ring should become a filled disc."""
+        from grdl_imagej import BinaryFillHoles
+        bfh = BinaryFillHoles(connectivity=8)
+        image = np.zeros((30, 30))
+        image[5:25, 5:25] = 1.0
+        image[10:20, 10:20] = 0.0  # Punch a hole
+        result = bfh.apply(image)
+        # Hole should now be filled
+        assert result[15, 15] == 1.0
+        assert result.sum() > image.sum()
+
+    def test_no_hole_unchanged(self):
+        """Image without holes should be unchanged."""
+        from grdl_imagej import BinaryFillHoles
+        bfh = BinaryFillHoles()
+        image = np.zeros((30, 30))
+        image[10:20, 10:20] = 1.0
+        result = bfh.apply(image)
+        np.testing.assert_array_equal(result, image)
+
+    def test_empty_image(self):
+        from grdl_imagej import BinaryFillHoles
+        bfh = BinaryFillHoles()
+        result = bfh.apply(np.zeros((20, 20)))
+        assert result.sum() == 0.0
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import BinaryFillHoles
+        bfh = BinaryFillHoles()
+        with pytest.raises(ValueError, match="2D"):
+            bfh.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# PseudoFlatField Tests
+# ============================================================================
+
+class TestPseudoFlatField:
+    """Tests for Pseudo Flat-Field Correction."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import PseudoFlatField
+        pff = PseudoFlatField(blur_radius=20.0)
+        image = np.random.RandomState(42).rand(50, 50) * 200
+        result = pff.apply(image)
+        assert result.shape == (50, 50)
+        assert result.dtype == np.float64
+
+    def test_normalized_output_range(self):
+        from grdl_imagej import PseudoFlatField
+        pff = PseudoFlatField(blur_radius=20.0, normalize_output=True)
+        image = np.random.RandomState(42).rand(50, 50) * 200 + 10
+        result = pff.apply(image)
+        assert result.min() >= -0.01
+        assert result.max() <= 1.01
+
+    def test_corrects_gradient(self):
+        """Should flatten a linear gradient illumination."""
+        from grdl_imagej import PseudoFlatField
+        pff = PseudoFlatField(blur_radius=30.0, normalize_output=False)
+        rows, cols = 80, 80
+        gradient = np.tile(np.linspace(50, 200, cols), (rows, 1))
+        result = pff.apply(gradient)
+        # Output should be more uniform than input
+        assert result.std() < gradient.std()
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import PseudoFlatField
+        pff = PseudoFlatField()
+        with pytest.raises(ValueError, match="2D"):
+            pff.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# NoiseGenerator Tests
+# ============================================================================
+
+class TestNoiseGenerator:
+    """Tests for NoiseGenerator."""
+
+    def test_gaussian_noise_changes_image(self):
+        from grdl_imagej import NoiseGenerator
+        ng = NoiseGenerator(noise_type='gaussian', sigma=25.0, seed=42)
+        image = np.full((50, 50), 100.0)
+        result = ng.apply(image)
+        assert result.shape == (50, 50)
+        assert not np.allclose(result, 100.0)
+
+    def test_gaussian_noise_zero_mean(self):
+        """Gaussian noise should have approximately zero mean offset."""
+        from grdl_imagej import NoiseGenerator
+        ng = NoiseGenerator(noise_type='gaussian', sigma=10.0, seed=42)
+        image = np.full((200, 200), 100.0)
+        result = ng.apply(image)
+        diff = result - image
+        assert abs(diff.mean()) < 2.0  # Roughly zero mean
+
+    def test_poisson_noise(self):
+        from grdl_imagej import NoiseGenerator
+        ng = NoiseGenerator(noise_type='poisson', seed=42)
+        image = np.full((50, 50), 100.0)
+        result = ng.apply(image)
+        assert result.shape == (50, 50)
+        assert result.dtype == np.float64
+
+    def test_salt_pepper_noise(self):
+        from grdl_imagej import NoiseGenerator
+        ng = NoiseGenerator(noise_type='salt_pepper', density=0.1, seed=42)
+        image = np.full((50, 50), 100.0)
+        result = ng.apply(image)
+        # Some pixels should differ from 100
+        assert not np.allclose(result, 100.0)
+
+    def test_speckle_noise(self):
+        from grdl_imagej import NoiseGenerator
+        ng = NoiseGenerator(noise_type='speckle', sigma=25.0, seed=42)
+        image = np.full((50, 50), 100.0)
+        result = ng.apply(image)
+        assert result.shape == (50, 50)
+        assert not np.allclose(result, 100.0)
+
+    def test_seed_reproducibility(self):
+        """Same seed should produce same noise."""
+        from grdl_imagej import NoiseGenerator
+        image = np.full((30, 30), 100.0)
+        r1 = NoiseGenerator(noise_type='gaussian', sigma=10.0, seed=7).apply(image)
+        r2 = NoiseGenerator(noise_type='gaussian', sigma=10.0, seed=7).apply(image)
+        np.testing.assert_array_equal(r1, r2)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import NoiseGenerator
+        ng = NoiseGenerator()
+        with pytest.raises(ValueError, match="2D"):
+            ng.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# MathOperations Tests
+# ============================================================================
+
+class TestMathOperations:
+    """Tests for MathOperations."""
+
+    def test_add(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations(operation='add', value=50.0)
+        image = np.full((20, 20), 100.0)
+        result = mo.apply(image)
+        np.testing.assert_allclose(result, 150.0)
+
+    def test_subtract(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations(operation='subtract', value=30.0)
+        image = np.full((20, 20), 100.0)
+        result = mo.apply(image)
+        np.testing.assert_allclose(result, 70.0)
+
+    def test_multiply(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations(operation='multiply', value=2.0)
+        image = np.full((20, 20), 50.0)
+        result = mo.apply(image)
+        np.testing.assert_allclose(result, 100.0)
+
+    def test_log(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations(operation='log')
+        image = np.full((20, 20), np.e)
+        result = mo.apply(image)
+        np.testing.assert_allclose(result, 1.0, atol=1e-10)
+
+    def test_sqrt(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations(operation='sqrt')
+        image = np.full((20, 20), 25.0)
+        result = mo.apply(image)
+        np.testing.assert_allclose(result, 5.0)
+
+    def test_square(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations(operation='square')
+        image = np.full((20, 20), 5.0)
+        result = mo.apply(image)
+        np.testing.assert_allclose(result, 25.0)
+
+    def test_abs(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations(operation='abs')
+        image = np.full((20, 20), -42.0)
+        result = mo.apply(image)
+        np.testing.assert_allclose(result, 42.0)
+
+    def test_nan_to_num(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations(operation='nan_to_num', nan_replacement=-1.0)
+        image = np.full((20, 20), 100.0)
+        image[5, 5] = np.nan
+        result = mo.apply(image)
+        assert result[5, 5] == -1.0
+        assert result[0, 0] == 100.0
+
+    def test_min_max(self):
+        from grdl_imagej import MathOperations
+        image = np.array([[10.0, 200.0], [50.0, 300.0]])
+        r_min = MathOperations(operation='min', value=100.0).apply(image)
+        r_max = MathOperations(operation='max', value=100.0).apply(image)
+        np.testing.assert_array_equal(r_min, [[10.0, 100.0], [50.0, 100.0]])
+        np.testing.assert_array_equal(r_max, [[100.0, 200.0], [100.0, 300.0]])
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import MathOperations
+        mo = MathOperations()
+        with pytest.raises(ValueError, match="2D"):
+            mo.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# TypeConverter Tests
+# ============================================================================
+
+class TestTypeConverter:
+    """Tests for TypeConverter."""
+
+    def test_float_to_uint8_scaled(self):
+        from grdl_imagej import TypeConverter
+        tc = TypeConverter(target_type='uint8', scale=True)
+        image = np.array([[0.0, 127.5], [255.0, 64.0]])
+        result = tc.apply(image)
+        assert result.dtype == np.uint8
+        assert result[0, 0] == 0
+        assert result[0, 1] == 127  # (127.5/255)*255 = 127
+
+    def test_uint8_to_float64(self):
+        from grdl_imagej import TypeConverter
+        tc = TypeConverter(target_type='float64')
+        image = np.array([[0, 128, 255]], dtype=np.uint8)
+        result = tc.apply(image)
+        assert result.dtype == np.float64
+
+    def test_normalize_to_01(self):
+        from grdl_imagej import TypeConverter
+        tc = TypeConverter(target_type='float32', normalize=True)
+        image = np.array([[0.0, 100.0], [200.0, 50.0]])
+        result = tc.apply(image)
+        assert result.dtype == np.float32
+        assert result.min() >= 0.0
+        assert result.max() <= 1.0
+
+    def test_identity_conversion(self):
+        from grdl_imagej import TypeConverter
+        tc = TypeConverter(target_type='float64', scale=False)
+        image = np.array([[1.0, 2.0], [3.0, 4.0]])
+        result = tc.apply(image)
+        np.testing.assert_array_equal(result, image)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import TypeConverter
+        tc = TypeConverter()
+        with pytest.raises(ValueError, match="2D"):
+            tc.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# BilateralFilter Tests
+# ============================================================================
+
+class TestBilateralFilter:
+    """Tests for BilateralFilter."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import BilateralFilter
+        bf = BilateralFilter(sigma_spatial=2.0, sigma_range=30.0, radius=3)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = bf.apply(image)
+        assert result.shape == (20, 20)
+        assert result.dtype == np.float64
+
+    def test_flat_image_unchanged(self):
+        from grdl_imagej import BilateralFilter
+        bf = BilateralFilter(sigma_spatial=2.0, sigma_range=30.0, radius=3)
+        flat = np.full((20, 20), 100.0)
+        result = bf.apply(flat)
+        np.testing.assert_allclose(result, 100.0, atol=0.01)
+
+    def test_preserves_edge(self):
+        """Bilateral filter should preserve strong edges."""
+        from grdl_imagej import BilateralFilter
+        bf = BilateralFilter(sigma_spatial=3.0, sigma_range=10.0, radius=5)
+        image = np.zeros((30, 60))
+        image[:, 30:] = 200.0
+        result = bf.apply(image)
+        # Far from edge, values should stay close to original
+        assert abs(result[15, 5] - 0.0) < 5.0
+        assert abs(result[15, 55] - 200.0) < 5.0
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import BilateralFilter
+        bf = BilateralFilter()
+        with pytest.raises(ValueError, match="2D"):
+            bf.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# EntropyFilter Tests
+# ============================================================================
+
+class TestEntropyFilter:
+    """Tests for EntropyFilter."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import EntropyFilter
+        ef = EntropyFilter(radius=2, n_bins=64)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = ef.apply(image)
+        assert result.shape == (20, 20)
+        assert result.dtype == np.float64
+
+    def test_flat_image_zero_entropy(self):
+        from grdl_imagej import EntropyFilter
+        ef = EntropyFilter(radius=3, n_bins=256)
+        flat = np.full((20, 20), 100.0)
+        result = ef.apply(flat)
+        np.testing.assert_allclose(result, 0.0, atol=0.01)
+
+    def test_nonnegative(self):
+        from grdl_imagej import EntropyFilter
+        ef = EntropyFilter(radius=2, n_bins=64)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = ef.apply(image)
+        assert np.all(result >= 0.0)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import EntropyFilter
+        ef = EntropyFilter()
+        with pytest.raises(ValueError, match="2D"):
+            ef.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# KuwaharaFilter Tests
+# ============================================================================
+
+class TestKuwaharaFilter:
+    """Tests for KuwaharaFilter."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import KuwaharaFilter
+        kf = KuwaharaFilter(radius=2)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = kf.apply(image)
+        assert result.shape == (20, 20)
+        assert result.dtype == np.float64
+
+    def test_flat_image_unchanged(self):
+        from grdl_imagej import KuwaharaFilter
+        kf = KuwaharaFilter(radius=2)
+        flat = np.full((20, 20), 100.0)
+        result = kf.apply(flat)
+        np.testing.assert_allclose(result, 100.0, atol=0.01)
+
+    def test_reduces_noise(self):
+        from grdl_imagej import KuwaharaFilter
+        kf = KuwaharaFilter(radius=3)
+        rng = np.random.RandomState(42)
+        noisy = np.full((30, 30), 100.0) + rng.randn(30, 30) * 20
+        result = kf.apply(noisy)
+        assert result.std() < noisy.std()
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import KuwaharaFilter
+        kf = KuwaharaFilter()
+        with pytest.raises(ValueError, match="2D"):
+            kf.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# LocalBinaryPatterns Tests
+# ============================================================================
+
+class TestLocalBinaryPatterns:
+    """Tests for LocalBinaryPatterns."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import LocalBinaryPatterns
+        lbp = LocalBinaryPatterns(radius=1, n_neighbors=8)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = lbp.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_nonnegative_integer_codes(self):
+        """LBP codes should be non-negative integers."""
+        from grdl_imagej import LocalBinaryPatterns
+        lbp = LocalBinaryPatterns(radius=1, n_neighbors=8, method='default')
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = lbp.apply(image)
+        assert np.all(result >= 0.0)
+        assert np.all(result <= 255.0)
+        # Codes should be integer-valued
+        np.testing.assert_array_equal(result, np.round(result))
+
+    def test_all_methods_run(self):
+        from grdl_imagej import LocalBinaryPatterns
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        for method in ['default', 'uniform', 'rotation_invariant']:
+            lbp = LocalBinaryPatterns(radius=1, n_neighbors=8, method=method)
+            result = lbp.apply(image)
+            assert result.shape == (20, 20), f"Failed for {method}"
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import LocalBinaryPatterns
+        lbp = LocalBinaryPatterns()
+        with pytest.raises(ValueError, match="2D"):
+            lbp.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# GaborFilterBank Tests
+# ============================================================================
+
+class TestGaborFilterBank:
+    """Tests for GaborFilterBank."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import GaborFilterBank
+        gfb = GaborFilterBank(sigma=2.0, n_orientations=4, lambda_=8.0)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = gfb.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_nonnegative_output(self):
+        """Max-response output should be non-negative."""
+        from grdl_imagej import GaborFilterBank
+        gfb = GaborFilterBank(sigma=2.0, n_orientations=4, lambda_=8.0)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = gfb.apply(image)
+        assert np.all(result >= 0.0)
+
+    def test_flat_image_uniform_response(self):
+        """Flat image should give spatially uniform Gabor response."""
+        from grdl_imagej import GaborFilterBank
+        gfb = GaborFilterBank(sigma=2.0, n_orientations=4, lambda_=8.0)
+        flat = np.full((30, 30), 100.0)
+        result = gfb.apply(flat)
+        # Interior should be spatially uniform
+        assert result[5:-5, 5:-5].std() < 0.01
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import GaborFilterBank
+        gfb = GaborFilterBank()
+        with pytest.raises(ValueError, match="2D"):
+            gfb.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# HarrisCornerDetector Tests
+# ============================================================================
+
+class TestHarrisCornerDetector:
+    """Tests for HarrisCornerDetector."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import HarrisCornerDetector
+        hcd = HarrisCornerDetector(sigma=1.0, k=0.04, threshold=0.01)
+        image = np.random.RandomState(42).rand(50, 50) * 200
+        result = hcd.apply(image)
+        assert result.shape == (50, 50)
+        assert result.dtype == np.float64
+
+    def test_flat_image_no_corners(self):
+        from grdl_imagej import HarrisCornerDetector
+        hcd = HarrisCornerDetector()
+        flat = np.full((40, 40), 100.0)
+        result = hcd.apply(flat)
+        assert result.sum() == 0.0
+
+    def test_detects_corner(self):
+        """Should detect corners of a bright square."""
+        from grdl_imagej import HarrisCornerDetector
+        hcd = HarrisCornerDetector(sigma=1.0, k=0.04, threshold=0.001, nms_radius=3)
+        image = np.zeros((60, 60))
+        image[15:45, 15:45] = 200.0
+        result = hcd.apply(image)
+        # Should have non-zero responses near corners of the square
+        assert result.sum() > 0.0
+
+    def test_nonnegative_output(self):
+        from grdl_imagej import HarrisCornerDetector
+        hcd = HarrisCornerDetector()
+        image = np.random.RandomState(42).rand(40, 40) * 200
+        result = hcd.apply(image)
+        assert np.all(result >= 0.0)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import HarrisCornerDetector
+        hcd = HarrisCornerDetector()
+        with pytest.raises(ValueError, match="2D"):
+            hcd.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# PhaseCorrelation Tests
+# ============================================================================
+
+class TestPhaseCorrelation:
+    """Tests for PhaseCorrelation."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import PhaseCorrelation
+        pc = PhaseCorrelation()
+        image = np.random.RandomState(42).rand(50, 50) * 200
+        ref = image.copy()
+        result = pc.apply(image, reference=ref)
+        assert result.shape == (50, 50)
+        assert result.dtype == np.float64
+
+    def test_zero_shift_detection(self):
+        """Identical images should produce ~zero shift."""
+        from grdl_imagej import PhaseCorrelation
+        pc = PhaseCorrelation(upsample_factor=1)
+        image = np.random.RandomState(42).rand(50, 50) * 200
+        pc.apply(image, reference=image.copy())
+        dy, dx = pc.last_shift
+        assert abs(dy) < 1.0
+        assert abs(dx) < 1.0
+
+    def test_detects_known_shift(self):
+        """Should detect a known integer translation."""
+        from grdl_imagej import PhaseCorrelation
+        pc = PhaseCorrelation(upsample_factor=1, window='none')
+        rng = np.random.RandomState(42)
+        ref = rng.rand(64, 64) * 200
+        # Shift by (3, 5)
+        shifted = np.roll(np.roll(ref, 3, axis=0), 5, axis=1)
+        pc.apply(shifted, reference=ref)
+        dy, dx = pc.last_shift
+        assert abs(dy - 3) < 1.5
+        assert abs(dx - 5) < 1.5
+
+    def test_no_reference_returns_zeros(self):
+        from grdl_imagej import PhaseCorrelation
+        pc = PhaseCorrelation()
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = pc.apply(image)
+        assert result.sum() == 0.0
+        assert pc.last_shift == (0.0, 0.0)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import PhaseCorrelation
+        pc = PhaseCorrelation()
+        with pytest.raises(ValueError, match="2D"):
+            pc.apply(np.zeros((3, 10, 10)))
+
+    def test_rejects_shape_mismatch(self):
+        from grdl_imagej import PhaseCorrelation
+        pc = PhaseCorrelation()
+        with pytest.raises(ValueError, match="shape"):
+            pc.apply(np.zeros((30, 30)), reference=np.zeros((20, 20)))
+
+
+# ============================================================================
+# ColorSpaceConverter Tests
+# ============================================================================
+
+class TestColorSpaceConverter:
+    """Tests for ColorSpaceConverter."""
+
+    def test_rgb_to_lab_shape(self):
+        from grdl_imagej import ColorSpaceConverter
+        csc = ColorSpaceConverter(source_space='rgb', target_space='lab')
+        image = np.random.RandomState(42).rand(20, 20, 3)
+        result = csc.apply(image)
+        assert result.shape == (20, 20, 3)
+        assert result.dtype == np.float64
+
+    def test_identity_conversion(self):
+        from grdl_imagej import ColorSpaceConverter
+        csc = ColorSpaceConverter(source_space='rgb', target_space='rgb')
+        image = np.random.RandomState(42).rand(20, 20, 3)
+        result = csc.apply(image)
+        np.testing.assert_allclose(result, image, atol=1e-10)
+
+    def test_rgb_hsb_roundtrip(self):
+        from grdl_imagej import ColorSpaceConverter
+        image = np.random.RandomState(42).rand(20, 20, 3)
+        hsb = ColorSpaceConverter(source_space='rgb', target_space='hsb').apply(image)
+        rgb = ColorSpaceConverter(source_space='hsb', target_space='rgb').apply(hsb)
+        np.testing.assert_allclose(rgb, image, atol=1e-10)
+
+    def test_rgb_lab_roundtrip(self):
+        from grdl_imagej import ColorSpaceConverter
+        image = np.random.RandomState(42).rand(20, 20, 3) * 0.9 + 0.05
+        lab = ColorSpaceConverter(source_space='rgb', target_space='lab').apply(image)
+        rgb = ColorSpaceConverter(source_space='lab', target_space='rgb').apply(lab)
+        np.testing.assert_allclose(rgb, image, atol=0.01)
+
+    def test_rgb_ycbcr_roundtrip(self):
+        from grdl_imagej import ColorSpaceConverter
+        image = np.random.RandomState(42).rand(20, 20, 3) * 0.8 + 0.1
+        ycbcr = ColorSpaceConverter(source_space='rgb', target_space='ycbcr').apply(image)
+        rgb = ColorSpaceConverter(source_space='ycbcr', target_space='rgb').apply(ycbcr)
+        np.testing.assert_allclose(rgb, image, atol=0.01)
+
+    def test_rejects_non_3channel(self):
+        from grdl_imagej import ColorSpaceConverter
+        csc = ColorSpaceConverter()
+        with pytest.raises(ValueError, match="3-channel"):
+            csc.apply(np.zeros((20, 20)))
+
+    def test_lab_luminance_range(self):
+        """L* should be in [0, 100] for valid RGB input."""
+        from grdl_imagej import ColorSpaceConverter
+        csc = ColorSpaceConverter(source_space='rgb', target_space='lab')
+        image = np.random.RandomState(42).rand(20, 20, 3)
+        lab = csc.apply(image)
+        assert lab[..., 0].min() >= -1.0  # L* ≥ 0
+        assert lab[..., 0].max() <= 101.0  # L* ≤ 100
+
+
+# ============================================================================
+# WhiteBalance Tests
+# ============================================================================
+
+class TestWhiteBalance:
+    """Tests for WhiteBalance."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import WhiteBalance
+        wb = WhiteBalance(method='gray_world')
+        image = np.random.RandomState(42).rand(20, 20, 3)
+        result = wb.apply(image)
+        assert result.shape == (20, 20, 3)
+        assert result.dtype == np.float64
+
+    def test_output_clipped(self):
+        from grdl_imagej import WhiteBalance
+        wb = WhiteBalance(method='gray_world')
+        image = np.random.RandomState(42).rand(20, 20, 3)
+        result = wb.apply(image)
+        assert result.min() >= 0.0
+        assert result.max() <= 1.0
+
+    def test_gray_world_equalizes_means(self):
+        """Gray world should make channel means more similar."""
+        from grdl_imagej import WhiteBalance
+        wb = WhiteBalance(method='gray_world')
+        image = np.random.RandomState(42).rand(30, 30, 3)
+        image[..., 0] *= 0.5  # Create red channel imbalance
+        result = wb.apply(image)
+        means = [result[..., c].mean() for c in range(3)]
+        # Means should be closer together after correction
+        assert max(means) - min(means) < 0.2
+
+    def test_all_methods_run(self):
+        from grdl_imagej import WhiteBalance
+        image = np.random.RandomState(42).rand(20, 20, 3)
+        for method in ['gray_world', 'white_patch', 'percentile']:
+            wb = WhiteBalance(method=method)
+            result = wb.apply(image)
+            assert result.shape == (20, 20, 3), f"Failed for {method}"
+
+    def test_rejects_non_3channel(self):
+        from grdl_imagej import WhiteBalance
+        wb = WhiteBalance()
+        with pytest.raises(ValueError, match="3-channel"):
+            wb.apply(np.zeros((20, 20)))
