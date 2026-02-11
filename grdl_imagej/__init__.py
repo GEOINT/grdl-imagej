@@ -18,31 +18,49 @@ Process > Filters (filters/):
 - UnsharpMask: Gaussian-based sharpening
 - GaussianBlur: Isotropic/anisotropic Gaussian smoothing
 - Convolver: Arbitrary 2D kernel convolution
+- DifferenceOfGaussians: Band-pass filter via Gaussian subtraction (DoG)
+- Shadows: Directional shadow/emboss effects
+- Smooth: Fixed 3x3 mean smoothing
+- Sharpen: Fixed 3x3 Laplacian sharpening
+- VarianceFilter: Local variance / standard deviation
+- EntropyFilter: Local Shannon entropy
+- KuwaharaFilter: Edge-preserving quadrant-based smoothing
+- LocalBinaryPatterns: LBP texture micro-pattern encoding
+- GaborFilterBank: Multi-orientation Gabor texture filters
 
 Process > Subtract Background (background/):
 - RollingBallBackground: Background subtraction via Sternberg's rolling ball
+- PseudoFlatField: Illumination correction via Gaussian division
 
 Process > Binary (binary/):
 - MorphologicalFilter: Erode, Dilate, Open, Close, TopHat, BlackHat, Gradient
 - DistanceTransform: Euclidean Distance Map (EDM)
 - Skeletonize: Zhang-Suen binary thinning
+- BinaryOutline: 1-pixel-wide object outlines
+- BinaryFillHoles: Flood-fill interior holes
 
 Process > Enhance Contrast (enhance/):
 - CLAHE: Contrast Limited Adaptive Histogram Equalization
 - GammaCorrection: Power-law intensity transform
 - ContrastEnhancer: Linear histogram stretching with saturation
+- ColorSpaceConverter: RGB to/from HSB, Lab, YCbCr
+- WhiteBalance: Gray-world, white-patch, percentile color normalization
 
 Process > Find Edges (edges/):
 - EdgeDetector: Sobel, Prewitt, Roberts, LoG, Scharr
+- HarrisCornerDetector: Structure tensor-based corner detection
 
 Process > FFT (fft/):
 - FFTBandpassFilter: Frequency-domain bandpass and stripe suppression
+- PhaseCorrelation: Translational shift estimation via FFT
 
 Process > Find Maxima (find_maxima/):
 - FindMaxima: Prominence-based peak/target detection
 
-Process > Image Calculator (math/):
+Process > Math (math/):
 - ImageCalculator: Pixel-wise arithmetic and logical operations
+- MathOperations: Per-pixel math (add, log, exp, sqrt, etc.)
+- TypeConverter: Image dtype conversion with scaling
 
 Image > Adjust > Threshold (threshold/):
 - AutoLocalThreshold: Local thresholding (Bernsen, Niblack, Sauvola, etc.)
@@ -58,8 +76,10 @@ Image > Stacks (stacks/):
 Analyze > Analyze Particles (analyze/):
 - AnalyzeParticles: Connected component analysis with measurements
 
-Plugins > Anisotropic Diffusion (noise/):
+Plugins > Noise (noise/):
 - AnisotropicDiffusion: Perona-Malik edge-preserving smoothing
+- BilateralFilter: Edge-preserving bilateral smoothing
+- NoiseGenerator: Synthetic noise (Gaussian, Poisson, salt-pepper, speckle)
 
 Attribution
 -----------
@@ -89,32 +109,43 @@ Created
 
 Modified
 --------
-2026-02-09
+2026-02-11
 """
 
 # Process > Filters
-from grdl_imagej.filters import RankFilters, UnsharpMask, GaussianBlur, Convolver
+from grdl_imagej.filters import (
+    RankFilters, UnsharpMask, GaussianBlur, Convolver,
+    DifferenceOfGaussians, Shadows, Smooth, Sharpen,
+    VarianceFilter, EntropyFilter, KuwaharaFilter,
+    LocalBinaryPatterns, GaborFilterBank,
+)
 
 # Process > Subtract Background
-from grdl_imagej.background import RollingBallBackground
+from grdl_imagej.background import RollingBallBackground, PseudoFlatField
 
 # Process > Binary
-from grdl_imagej.binary import MorphologicalFilter, DistanceTransform, Skeletonize
+from grdl_imagej.binary import (
+    MorphologicalFilter, DistanceTransform, Skeletonize,
+    BinaryOutline, BinaryFillHoles,
+)
 
 # Process > Enhance Contrast
-from grdl_imagej.enhance import CLAHE, GammaCorrection, ContrastEnhancer
+from grdl_imagej.enhance import (
+    CLAHE, GammaCorrection, ContrastEnhancer,
+    ColorSpaceConverter, WhiteBalance,
+)
 
 # Process > Find Edges
-from grdl_imagej.edges import EdgeDetector
+from grdl_imagej.edges import EdgeDetector, HarrisCornerDetector
 
 # Process > FFT
-from grdl_imagej.fft import FFTBandpassFilter
+from grdl_imagej.fft import FFTBandpassFilter, PhaseCorrelation
 
 # Process > Find Maxima
 from grdl_imagej.find_maxima import FindMaxima
 
-# Process > Image Calculator
-from grdl_imagej.math import ImageCalculator
+# Process > Math
+from grdl_imagej.math import ImageCalculator, MathOperations, TypeConverter
 
 # Image > Adjust > Threshold
 from grdl_imagej.threshold import AutoLocalThreshold, AutoThreshold
@@ -128,32 +159,39 @@ from grdl_imagej.stacks import ZProjection
 # Analyze > Analyze Particles
 from grdl_imagej.analyze import AnalyzeParticles
 
-# Plugins > Anisotropic Diffusion
-from grdl_imagej.noise import AnisotropicDiffusion
+# Plugins > Noise
+from grdl_imagej.noise import AnisotropicDiffusion, BilateralFilter, NoiseGenerator
 
 __all__ = [
-    # Existing ports
-    'RollingBallBackground',
-    'CLAHE',
-    'AutoLocalThreshold',
-    'UnsharpMask',
-    'FFTBandpassFilter',
-    'ZProjection',
-    'RankFilters',
-    'MorphologicalFilter',
-    'EdgeDetector',
-    'GammaCorrection',
+    # Process > Filters
+    'RankFilters', 'UnsharpMask', 'GaussianBlur', 'Convolver',
+    'DifferenceOfGaussians', 'Shadows', 'Smooth', 'Sharpen',
+    'VarianceFilter', 'EntropyFilter', 'KuwaharaFilter',
+    'LocalBinaryPatterns', 'GaborFilterBank',
+    # Process > Subtract Background
+    'RollingBallBackground', 'PseudoFlatField',
+    # Process > Binary
+    'MorphologicalFilter', 'DistanceTransform', 'Skeletonize',
+    'BinaryOutline', 'BinaryFillHoles',
+    # Process > Enhance Contrast
+    'CLAHE', 'GammaCorrection', 'ContrastEnhancer',
+    'ColorSpaceConverter', 'WhiteBalance',
+    # Process > Find Edges
+    'EdgeDetector', 'HarrisCornerDetector',
+    # Process > FFT
+    'FFTBandpassFilter', 'PhaseCorrelation',
+    # Process > Find Maxima
     'FindMaxima',
-    'StatisticalRegionMerging',
-    # New ports (2026-02-09)
-    'GaussianBlur',
-    'Convolver',
-    'AutoThreshold',
-    'Watershed',
+    # Process > Math
+    'ImageCalculator', 'MathOperations', 'TypeConverter',
+    # Image > Adjust > Threshold
+    'AutoLocalThreshold', 'AutoThreshold',
+    # Plugins > Segmentation
+    'StatisticalRegionMerging', 'Watershed',
+    # Image > Stacks
+    'ZProjection',
+    # Analyze > Analyze Particles
     'AnalyzeParticles',
-    'ImageCalculator',
-    'ContrastEnhancer',
-    'DistanceTransform',
-    'Skeletonize',
-    'AnisotropicDiffusion',
+    # Plugins > Noise
+    'AnisotropicDiffusion', 'BilateralFilter', 'NoiseGenerator',
 ]
