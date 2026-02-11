@@ -1,0 +1,748 @@
+# ---------------------------------------------------------------------------
+# grdl-imagej Component Catalog
+#
+# Static metadata for all grdl-imagej image processing components.
+# Format is compatible with grdl-runtime's Artifact model so entries
+# can be ingested into the runtime catalog without modification.
+#
+# Maintained by: Steven Siebert
+# Last updated:  2026-02-11
+# ---------------------------------------------------------------------------
+
+catalog_meta:
+  format_version: 1
+  next_id: 23
+  package: grdl-imagej
+  description: >-
+    Pure-NumPy reimplementations of ImageJ/Fiji image processing algorithms,
+    selected for relevance to remotely sensed imagery (PAN, MSI, HSI, SAR,
+    thermal).
+
+artifacts:
+
+  # =========================================================================
+  # Process > Filters
+  # =========================================================================
+
+  - id: 1
+    name: gaussian-blur
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Gaussian smoothing filter with isotropic/anisotropic kernel"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.filters.gaussian_blur.GaussianBlur
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Process > Filters"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [FILTERS]
+    parameters:
+      - name: sigma
+        type: float
+        default: 2.0
+        constraints: {min: 0.001}
+        description: "Gaussian sigma in pixels"
+      - name: accuracy
+        type: float
+        default: 0.002
+        constraints: {min: 0.0001, max: 1.0}
+        description: "Accuracy parameter for kernel size"
+
+  - id: 2
+    name: rank-filters
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Rank-order spatial filters (median, min, max, mean, variance, despeckle)"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.filters.rank_filters.RankFilters
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: false
+    imagej_menu: "Process > Filters"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [FILTERS]
+    parameters:
+      - name: method
+        type: str
+        default: median
+        constraints: {options: [median, min, max, mean, variance, despeckle]}
+        description: "Filter type"
+      - name: radius
+        type: int
+        default: 2
+        constraints: {min: 1}
+        description: "Filter window half-size"
+
+  - id: 3
+    name: unsharp-mask
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Unsharp mask sharpening filter"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.filters.unsharp_mask.UnsharpMask
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: false
+    imagej_menu: "Process > Filters"
+    tags:
+      modality: [SAR, PAN, EO, MSI, SWIR, MWIR, LWIR]
+      category: [FILTERS]
+    parameters:
+      - name: sigma
+        type: float
+        default: 1.0
+        constraints: {min: 0.001}
+        description: "Gaussian blur sigma in pixels"
+      - name: weight
+        type: float
+        default: 0.6
+        constraints: {min: 0.0}
+        description: "Sharpening strength (mask weight)"
+
+  - id: 4
+    name: convolver
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "General-purpose 2D convolution with arbitrary kernel"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.filters.convolve.Convolver
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Process > Filters"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [FILTERS]
+    parameters:
+      - name: normalize
+        type: bool
+        default: true
+        description: "Normalize kernel to sum to 1"
+
+  # =========================================================================
+  # Process > Subtract Background
+  # =========================================================================
+
+  - id: 5
+    name: rolling-ball-background
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Rolling-ball background subtraction (Sternberg algorithm)"
+    author: "Michael Castle, Janice Keller (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.background.rolling_ball.RollingBallBackground
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: false
+    imagej_menu: "Process > Subtract Background"
+    tags:
+      modality: [SAR, PAN, EO, SWIR, MWIR, LWIR]
+      category: [BACKGROUND]
+    parameters:
+      - name: radius
+        type: float
+        default: 50.0
+        constraints: {min: 0.5}
+        description: "Rolling ball radius in pixels"
+      - name: light_background
+        type: bool
+        default: false
+        description: "Assume bright background and dark objects"
+      - name: create_background
+        type: bool
+        default: false
+        description: "Return estimated background instead of subtracted"
+      - name: smoothing
+        type: bool
+        default: true
+        description: "Apply 3x3 mean smoothing to shrunken image"
+
+  # =========================================================================
+  # Process > Binary
+  # =========================================================================
+
+  - id: 6
+    name: morphological-filter
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Binary and grayscale morphological operations"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.binary.morphology.MorphologicalFilter
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: false
+    imagej_menu: "Process > Binary"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [BINARY]
+    parameters:
+      - name: operation
+        type: str
+        default: erode
+        constraints: {options: [erode, dilate, open, close, tophat, blackhat, gradient]}
+        description: "Morphological operation"
+      - name: radius
+        type: int
+        default: 1
+        constraints: {min: 1}
+        description: "Structuring element half-size"
+      - name: kernel_shape
+        type: str
+        default: square
+        constraints: {options: [square, cross, disk]}
+        description: "Structuring element shape"
+      - name: iterations
+        type: int
+        default: 1
+        constraints: {min: 1}
+        description: "Number of iterations"
+
+  - id: 7
+    name: distance-transform
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Euclidean Distance Map (EDM) of binary image"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.binary.distance_transform.DistanceTransform
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Process > Binary"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [BINARY]
+    parameters:
+      - name: normalize
+        type: bool
+        default: false
+        description: "Normalize output to [0, 1]"
+
+  - id: 8
+    name: skeletonize
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Binary skeletonization (Zhang-Suen thinning)"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.binary.skeletonize.Skeletonize
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: false
+    imagej_menu: "Process > Binary"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [BINARY]
+    parameters: []
+
+  # =========================================================================
+  # Process > Enhance Contrast
+  # =========================================================================
+
+  - id: 9
+    name: clahe
+    version: "0.5.0"
+    artifact_type: grdl_processor
+    description: "Contrast Limited Adaptive Histogram Equalization"
+    author: "Stephan Saalfeld (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.enhance.clahe.CLAHE
+    processor_version: "0.5.0"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Process > Enhance Contrast"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [ENHANCE]
+    parameters:
+      - name: block_size
+        type: int
+        default: 127
+        constraints: {min: 2}
+        description: "Tile side length in pixels"
+      - name: n_bins
+        type: int
+        default: 256
+        constraints: {min: 2}
+        description: "Number of histogram bins"
+      - name: max_slope
+        type: float
+        default: 3.0
+        constraints: {min: 1.0}
+        description: "Maximum CDF slope (clip limit)"
+
+  - id: 10
+    name: gamma-correction
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Power-law gamma correction"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.enhance.gamma.GammaCorrection
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Process > Enhance Contrast"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [ENHANCE]
+    parameters:
+      - name: gamma
+        type: float
+        default: 0.5
+        constraints: {min: 0.001}
+        description: "Gamma exponent"
+
+  - id: 11
+    name: contrast-enhancer
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Linear histogram stretching with saturation control"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.enhance.contrast_enhancer.ContrastEnhancer
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Process > Enhance Contrast"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [ENHANCE]
+    parameters:
+      - name: saturated
+        type: float
+        default: 0.35
+        constraints: {min: 0.0, max: 99.99}
+        description: "Saturation percentage"
+      - name: equalize
+        type: bool
+        default: false
+        description: "Histogram equalization instead of stretch"
+      - name: normalize
+        type: bool
+        default: false
+        description: "Normalize output to [0, 1]"
+
+  # =========================================================================
+  # Process > Find Edges
+  # =========================================================================
+
+  - id: 12
+    name: edge-detector
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Gradient-based edge detection (Sobel, Prewitt, Roberts, LoG, Scharr)"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.edges.edge_detection.EdgeDetector
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: false
+    imagej_menu: "Process > Find Edges"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [EDGES]
+    parameters:
+      - name: method
+        type: str
+        default: sobel
+        constraints: {options: [sobel, prewitt, roberts, log, scharr]}
+        description: "Edge detection operator"
+      - name: sigma
+        type: float
+        default: 1.4
+        constraints: {min: 0.001}
+        description: "Gaussian sigma for LoG method"
+
+  # =========================================================================
+  # Process > FFT
+  # =========================================================================
+
+  - id: 13
+    name: fft-bandpass-filter
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "FFT bandpass filter with optional stripe suppression"
+    author: "Joachim Walter (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.fft.fft_bandpass.FFTBandpassFilter
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Process > FFT"
+    tags:
+      modality: [SAR, PAN, EO, MSI, SWIR, MWIR, LWIR]
+      category: [FFT]
+    parameters:
+      - name: filter_large
+        type: float
+        default: 40.0
+        constraints: {min: 0}
+        description: "Cutoff size for large structures (pixels)"
+      - name: filter_small
+        type: float
+        default: 3.0
+        constraints: {min: 0}
+        description: "Cutoff size for small structures (pixels)"
+      - name: suppress_stripes
+        type: str
+        default: null
+        constraints: {options: [null, horizontal, vertical]}
+        description: "Direction of stripes to suppress"
+      - name: stripe_tolerance
+        type: float
+        default: 5.0
+        constraints: {min: 0}
+        description: "Angular tolerance for stripe suppression"
+      - name: autoscale
+        type: bool
+        default: true
+        description: "Normalize result to input statistics"
+
+  # =========================================================================
+  # Process > Find Maxima
+  # =========================================================================
+
+  - id: 14
+    name: find-maxima
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Prominence-based local maximum detection"
+    author: "Wayne Rasband, Michael Schmid (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.find_maxima.find_maxima.FindMaxima
+    processor_version: "1.54j"
+    processor_type: detector
+    gpu_compatible: false
+    imagej_menu: "Process > Find Maxima"
+    tags:
+      modality: [SAR, PAN, EO, SWIR, MWIR, LWIR]
+      category: [FIND_MAXIMA]
+    parameters:
+      - name: prominence
+        type: float
+        default: 10.0
+        constraints: {min: 0.0}
+        description: "Minimum peak-to-saddle height"
+      - name: output
+        type: str
+        default: point_map
+        constraints: {options: [point_map, count_map]}
+        description: "Output format"
+      - name: exclude_on_edges
+        type: bool
+        default: false
+        description: "Exclude maxima on image borders"
+
+  # =========================================================================
+  # Process > Image Calculator
+  # =========================================================================
+
+  - id: 15
+    name: image-calculator
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Pixel-wise image arithmetic and logic operations"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.math.image_calculator.ImageCalculator
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Process > Image Calculator"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [MATH]
+    parameters:
+      - name: operation
+        type: str
+        default: add
+        constraints:
+          options: [add, subtract, multiply, divide, and, or, xor, min, max, average, difference, ratio]
+        description: "Pixel-wise operation"
+
+  # =========================================================================
+  # Image > Adjust > Threshold
+  # =========================================================================
+
+  - id: 16
+    name: auto-threshold
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Global automatic thresholding with 16 methods"
+    author: "Wayne Rasband (original), Gabriel Landini (methods), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.threshold.auto_threshold.AutoThreshold
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Image > Adjust > Threshold"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [THRESHOLD]
+    parameters:
+      - name: method
+        type: str
+        default: otsu
+        constraints:
+          options:
+            - default
+            - huang
+            - intermodes
+            - isodata
+            - li
+            - maxentropy
+            - mean
+            - minerror
+            - minimum
+            - moments
+            - otsu
+            - percentile
+            - renyientropy
+            - shanbhag
+            - triangle
+            - yen
+        description: "Thresholding method"
+      - name: n_bins
+        type: int
+        default: 256
+        constraints: {min: 2}
+        description: "Histogram bins"
+      - name: dark_background
+        type: bool
+        default: true
+        description: "Dark background convention"
+
+  - id: 17
+    name: auto-local-threshold
+    version: "1.10.1"
+    artifact_type: grdl_processor
+    description: "Adaptive local thresholding with 8 methods"
+    author: "Gabriel Landini (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.threshold.auto_local_threshold.AutoLocalThreshold
+    processor_version: "1.10.1"
+    processor_type: transform
+    gpu_compatible: false
+    imagej_menu: "Image > Adjust > Threshold"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [THRESHOLD]
+    parameters:
+      - name: method
+        type: str
+        default: sauvola
+        constraints: {options: [bernsen, mean, median, midgrey, niblack, sauvola, phansalkar, contrast]}
+        description: "Thresholding method"
+      - name: radius
+        type: int
+        default: 15
+        constraints: {min: 1}
+        description: "Local window half-size"
+      - name: k
+        type: float
+        default: 0.5
+        description: "Sensitivity to local std deviation"
+      - name: r
+        type: float
+        default: 128.0
+        description: "Dynamic range of standard deviation"
+      - name: c
+        type: float
+        default: 0.0
+        description: "Offset constant for Mean/Median/MidGrey"
+      - name: contrast_threshold
+        type: float
+        default: 15.0
+        description: "Minimum local contrast for Bernsen/Contrast"
+      - name: p
+        type: float
+        default: 2.0
+        description: "Phansalkar p parameter"
+      - name: q
+        type: float
+        default: 10.0
+        description: "Phansalkar q parameter"
+
+  # =========================================================================
+  # Plugins > Segmentation
+  # =========================================================================
+
+  - id: 18
+    name: statistical-region-merging
+    version: "1.0"
+    artifact_type: grdl_processor
+    description: "Statistical Region Merging (SRM) image segmentation"
+    author: "Johannes Schindelin (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.segmentation.statistical_region_merging.StatisticalRegionMerging
+    processor_version: "1.0"
+    processor_type: segmentation
+    gpu_compatible: false
+    imagej_menu: "Plugins > Segmentation"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI]
+      category: [SEGMENTATION]
+    parameters:
+      - name: Q
+        type: float
+        default: 25.0
+        constraints: {min: 0.001}
+        description: "Coarseness parameter"
+      - name: output
+        type: str
+        default: labels
+        constraints: {options: [labels, mean]}
+        description: "Output format"
+
+  - id: 19
+    name: watershed
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Binary watershed segmentation for splitting touching objects"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.segmentation.watershed.Watershed
+    processor_version: "1.54j"
+    processor_type: segmentation
+    gpu_compatible: false
+    imagej_menu: "Plugins > Segmentation"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [SEGMENTATION]
+    parameters:
+      - name: min_seed_distance
+        type: int
+        default: 2
+        constraints: {min: 1}
+        description: "Minimum pixel distance between seeds"
+      - name: output_mode
+        type: str
+        default: labels
+        constraints: {options: [labels, lines, binary]}
+        description: "Output format"
+
+  # =========================================================================
+  # Image > Stacks
+  # =========================================================================
+
+  - id: 20
+    name: z-projection
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Z-Projection of 3D image stacks along band/time axis"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.stacks.z_projection.ZProjection
+    processor_version: "1.54j"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Image > Stacks"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [STACKS]
+    parameters:
+      - name: method
+        type: str
+        default: max
+        constraints: {options: [average, max, min, sum, std, median]}
+        description: "Projection method"
+
+  # =========================================================================
+  # Analyze > Analyze Particles
+  # =========================================================================
+
+  - id: 21
+    name: analyze-particles
+    version: "1.54j"
+    artifact_type: grdl_processor
+    description: "Connected component analysis with geometric measurements"
+    author: "Wayne Rasband (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.analyze.analyze_particles.AnalyzeParticles
+    processor_version: "1.54j"
+    processor_type: analyzer
+    gpu_compatible: false
+    imagej_menu: "Analyze > Analyze Particles"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [ANALYZE]
+    parameters:
+      - name: min_area
+        type: float
+        default: 0
+        constraints: {min: 0}
+        description: "Minimum particle area in pixels"
+      - name: max_area
+        type: float
+        default: .inf
+        description: "Maximum particle area in pixels"
+      - name: min_circularity
+        type: float
+        default: 0.0
+        constraints: {min: 0.0, max: 1.0}
+        description: "Minimum circularity"
+      - name: max_circularity
+        type: float
+        default: 1.0
+        constraints: {min: 0.0, max: 1.0}
+        description: "Maximum circularity"
+      - name: connectivity
+        type: int
+        default: 8
+        constraints: {options: [4, 8]}
+        description: "Labeling connectivity"
+      - name: output_mode
+        type: str
+        default: labels
+        constraints: {options: [labels, mask, outlines]}
+        description: "Output format"
+
+  # =========================================================================
+  # Plugins > Anisotropic Diffusion
+  # =========================================================================
+
+  - id: 22
+    name: anisotropic-diffusion
+    version: "2.0.0"
+    artifact_type: grdl_processor
+    description: "Perona-Malik edge-preserving diffusion filter"
+    author: "Thomas Fehrenbach (original), Steven Siebert (port)"
+    license: MIT
+    processor_class: grdl_imagej.noise.anisotropic_diffusion.AnisotropicDiffusion
+    processor_version: "2.0.0"
+    processor_type: transform
+    gpu_compatible: true
+    imagej_menu: "Plugins > Anisotropic Diffusion"
+    tags:
+      modality: [SAR, PAN, EO, MSI, HSI, SWIR, MWIR, LWIR]
+      category: [NOISE]
+    parameters:
+      - name: n_iterations
+        type: int
+        default: 20
+        constraints: {min: 1}
+        description: "Number of diffusion iterations"
+      - name: kappa
+        type: float
+        default: 20.0
+        constraints: {min: 0.001}
+        description: "Conductance parameter (gradient threshold)"
+      - name: gamma
+        type: float
+        default: 0.1
+        constraints: {min: 0.001, max: 0.25}
+        description: "Integration constant (time step)"
+      - name: conductance
+        type: str
+        default: exponential
+        constraints: {options: [exponential, quadratic]}
+        description: "Conductance function"
