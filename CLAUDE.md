@@ -123,6 +123,17 @@ class MyFilter(ImageTransform):
 - `@processor_tags`: stamps `__processor_tags__` — modalities, category, description for catalog filtering.
 - `Annotated[type, Range/Options, Desc]`: declares tunable parameters with constraints that are validated at init and at runtime via `_resolve_params()`.
 
+### Catalog Registration
+
+**Every new processor must be registered in `grdl_imagej/catalog/components.yaml`.**  This YAML catalog is the static manifest consumed by grdl-runtime's `YamlArtifactCatalog`. A processor that is not listed here will not appear in the runtime catalog or grdk UI.
+
+When adding a new entry:
+
+1. Increment `catalog_meta.next_id` and use the previous value as the new artifact's `id`.
+2. Follow the existing entry format exactly — required fields: `id`, `name`, `version`, `artifact_type` (`grdl_processor`), `description`, `author`, `license`, `processor_class` (fully-qualified dotted path), `processor_version`, `processor_type` (`transform` | `detector` | `segmentation` | `analyzer`), `gpu_compatible`, `imagej_menu`, `tags` (with `modality` and `category` lists), and `parameters` (list of param dicts or `[]`).
+3. Place the entry under the correct `imagej_menu` section header (add a new section if needed).
+4. Update `tests/test_catalog.py`: add the new name to `TestAllComponentsPresent.EXPECTED_NAMES` and bump all `== 22` counts to match the new total.
+
 ## Testing
 
 - Framework: **pytest**
