@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Pure-NumPy reimplementations of 22 ImageJ/Fiji image processing algorithms,
+Pure-NumPy reimplementations of 64 ImageJ/Fiji image processing algorithms,
 packaged as a GRDL extension. All processors inherit from
 `grdl.image_processing.base.ImageTransform`.
 
@@ -20,21 +20,32 @@ packaged as a GRDL extension. All processors inherit from
 
 ```
 grdl_imagej/
-├── __init__.py          # Barrel re-export of all 22 classes
+├── __init__.py          # Barrel re-export of all 64 classes
 ├── _taxonomy.py         # Category → ImageJ menu label mapping
-├── filters/             # RankFilters, UnsharpMask, GaussianBlur, Convolver
-├── background/          # RollingBallBackground
-├── binary/              # MorphologicalFilter, DistanceTransform, Skeletonize
-├── enhance/             # CLAHE, GammaCorrection, ContrastEnhancer
-├── edges/               # EdgeDetector
-├── fft/                 # FFTBandpassFilter
-├── find_maxima/         # FindMaxima
-├── math/                # ImageCalculator
+├── filters/             # RankFilters, UnsharpMask, GaussianBlur, Convolver,
+│                        #   DifferenceOfGaussians, Shadows, Smooth, Sharpen,
+│                        #   VarianceFilter, EntropyFilter, KuwaharaFilter,
+│                        #   LocalBinaryPatterns, GaborFilterBank, FrangiVesselness
+├── background/          # RollingBallBackground, PseudoFlatField, SlidingParaboloid
+├── binary/              # MorphologicalFilter, DistanceTransform, Skeletonize,
+│                        #   BinaryOutline, BinaryFillHoles, MorphologicalReconstruction,
+│                        #   MorphologicalGradient, MorphologicalLaplacian,
+│                        #   DirectionalFilter, KillBorders
+├── enhance/             # CLAHE, GammaCorrection, ContrastEnhancer,
+│                        #   ColorSpaceConverter, WhiteBalance, ColorDeconvolution
+├── edges/               # EdgeDetector, HarrisCornerDetector, RidgeDetection
+├── fft/                 # FFTBandpassFilter, PhaseCorrelation, RichardsonLucy,
+│                        #   WienerFilter, FFTCustomFilter, TemplateMatching
+├── find_maxima/         # FindMaxima, HoughTransform
+├── math/                # ImageCalculator, MathOperations, TypeConverter
 ├── threshold/           # AutoThreshold, AutoLocalThreshold
-├── segmentation/        # StatisticalRegionMerging, Watershed
+├── segmentation/        # StatisticalRegionMerging, Watershed,
+│                        #   MarkerControlledWatershed, ExtendedMinMax
 ├── stacks/              # ZProjection
-├── analyze/             # AnalyzeParticles
-└── noise/               # AnisotropicDiffusion
+├── analyze/             # AnalyzeParticles, GLCMHaralick, StructureTensor,
+│                        #   Granulometry, TamuraTexture
+└── noise/               # AnisotropicDiffusion, BilateralFilter, NoiseGenerator,
+                         #   NonLocalMeans, ROFDenoise
 ```
 
 ## Code Style
@@ -117,16 +128,18 @@ class MyFilter(ImageTransform):
 - Framework: **pytest**
 - Fixtures in `tests/conftest.py`
 - Benchmarks with `pytest-benchmark` (mark with `@pytest.mark.benchmark`)
-- Run: `pytest tests/ -v --benchmark-disable`
-- Coverage: `pytest tests/ -v --cov=grdl_imagej --cov-report=term-missing --benchmark-disable`
+- Run: `pytest tests/ -v -p no:napari --benchmark-disable`
+- Coverage: `pytest tests/ -v -p no:napari --cov=grdl_imagej --cov-report=term-missing --benchmark-disable`
 - Target: >75% line coverage
 
 ### Test Conventions
 
+- All tests in a single file: `tests/test_imagej.py`
 - One test class per processor: `TestProcessorName`
 - Test algorithmic correctness, not implementation details
 - Use synthetic images from fixtures (deterministic, seed=42)
 - Verify: output shape, dtype, value ranges, edge cases, parameter validation
+- Processors needing extra inputs (markers, PSF, template, stain_matrix, mask) receive them via `**kwargs`
 
 ## Dependencies
 
