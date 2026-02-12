@@ -16,7 +16,7 @@ location, parameter spec, complexity estimate, and academic references.
 
 ---
 
-## Already Ported (42 processors — excluded from all candidates below)
+## Already Ported (64 processors — excluded from all candidates below)
 
 | # | Processor | Category | Module |
 |---|-----------|----------|--------|
@@ -62,6 +62,28 @@ location, parameter spec, complexity estimate, and academic references.
 | 40 | MathOperations | math | `grdl_imagej.math` |
 | 41 | TypeConverter | math | `grdl_imagej.math` |
 | 42 | WhiteBalance | enhance | `grdl_imagej.enhance` |
+| 43 | GLCMHaralick | analyze | `grdl_imagej.analyze` |
+| 44 | NonLocalMeans | noise | `grdl_imagej.noise` |
+| 45 | StructureTensor | analyze | `grdl_imagej.analyze` |
+| 46 | FrangiVesselness | filters | `grdl_imagej.filters` |
+| 47 | MarkerControlledWatershed | segmentation | `grdl_imagej.segmentation` |
+| 48 | MorphologicalReconstruction | binary | `grdl_imagej.binary` |
+| 49 | RichardsonLucy | fft | `grdl_imagej.fft` |
+| 50 | WienerFilter | fft | `grdl_imagej.fft` |
+| 51 | HoughTransform | find_maxima | `grdl_imagej.find_maxima` |
+| 52 | RidgeDetection | edges | `grdl_imagej.edges` |
+| 53 | SlidingParaboloid | background | `grdl_imagej.background` |
+| 54 | ExtendedMinMax | segmentation | `grdl_imagej.segmentation` |
+| 55 | FFTCustomFilter | fft | `grdl_imagej.fft` |
+| 56 | TemplateMatching | fft | `grdl_imagej.fft` |
+| 57 | MorphologicalGradient | binary | `grdl_imagej.binary` |
+| 58 | MorphologicalLaplacian | binary | `grdl_imagej.binary` |
+| 59 | DirectionalFilter | binary | `grdl_imagej.binary` |
+| 60 | KillBorders | binary | `grdl_imagej.binary` |
+| 61 | Granulometry | analyze | `grdl_imagej.analyze` |
+| 62 | ROFDenoise | noise | `grdl_imagej.noise` |
+| 63 | ColorDeconvolution | enhance | `grdl_imagej.enhance` |
+| 64 | TamuraTexture | analyze | `grdl_imagej.analyze` |
 
 ---
 
@@ -82,7 +104,7 @@ Each ported processor must:
 ## Priority Tiers
 
 - **Tier 1 — High Value / Low Effort:** ~~Directly useful for GEOINT workflows, low porting complexity. Do these first.~~ **COMPLETE (20/20 ported 2026-02-11)**
-- **Tier 2 — High Value / Medium Effort:** Important algorithms that require more implementation work.
+- **Tier 2 — High Value / Medium Effort:** ~~Important algorithms that require more implementation work.~~ **COMPLETE (22/22 ported 2026-02-11)**
 - **Tier 3 — Specialized:** Useful for specific domains or as building blocks for higher-level tools.
 - **Tier 4 — Advanced / High Effort:** Academically important, complex implementations.
 
@@ -378,9 +400,9 @@ Each ported processor must:
 
 ---
 
-## Tier 2 — High Value / Medium Effort
+## Tier 2 — High Value / Medium Effort (COMPLETE — all 22 ported 2026-02-11)
 
-### T2-01. GLCM / Haralick Texture Features
+### ~~T2-01. GLCM / Haralick Texture Features~~ DONE
 - **Category:** `analyze` (texture)
 - **Type:** ImageTransform
 - **Description:** Computes Gray-Level Co-occurrence Matrices and derives Haralick texture descriptors: energy (ASM), entropy, contrast, correlation, homogeneity, dissimilarity, variance. Essential for land cover classification in remote sensing.
@@ -397,7 +419,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** Haralick, Shanmugam & Dinstein, "Textural Features for Image Classification", IEEE Trans. SMC, 3(6), 1973.
 
-### T2-02. Non-Local Means Denoising
+### ~~T2-02. Non-Local Means Denoising~~ DONE
 - **Category:** `noise` (denoising)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Denoises by averaging pixels with similar local neighborhoods across the entire image, exploiting non-local self-similarity. Superior to Gaussian smoothing for structured noise like SAR speckle.
@@ -413,7 +435,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy
 - **References:** Buades, Coll & Morel, "A Non-Local Algorithm for Image Denoising", CVPR 2005.
 
-### T2-03. Structure Tensor / Orientation Analysis
+### ~~T2-03. Structure Tensor / Orientation Analysis~~ DONE
 - **Category:** `analyze` (texture/feature)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Computes local structure tensor (gradient outer product smoothed by Gaussian) and extracts orientation, coherence, and energy. Characterizes local image anisotropy and dominant orientation. Critical for SAR polarimetry analysis.
@@ -427,7 +449,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy.ndimage (gaussian_filter)
 - **References:** Jahne, "Digital Image Processing", Springer, Chapter 13. Rezakhaniha et al., Biomechanics and Modeling in Mechanobiology, 11(3-4), 2012.
 
-### T2-04. Frangi Vesselness / Tubeness Filter
+### ~~T2-04. Frangi Vesselness / Tubeness Filter~~ DONE
 - **Category:** `filters` (feature detection)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Derives vesselness measure from Hessian matrix eigenvalues. Enhances tubular structures (vessels, ridges, linear features like roads/rivers) while suppressing blobs and background. Multi-scale capable.
@@ -443,7 +465,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy.ndimage (gaussian_filter)
 - **References:** Frangi et al., "Multiscale Vessel Enhancement Filtering", MICCAI, Springer LNCS 1496, 1998.
 
-### T2-05. Marker-Controlled Watershed (MorphoLibJ)
+### ~~T2-05. Marker-Controlled Watershed (MorphoLibJ)~~ DONE
 - **Category:** `segmentation`
 - **Type:** ImageTransform
 - **Description:** Watershed segmentation using provided markers to control region growing, preventing over-segmentation. Operates on gradient magnitude or distance transform images. Extends existing Watershed with marker support.
@@ -457,7 +479,7 @@ Each ported processor must:
 - **Dependencies:** numpy, heapq (priority queue)
 - **References:** Meyer, "Morphological Segmentation", J. Visual Communication and Image Representation, 1(1), 1990. Legland et al. (2016).
 
-### T2-06. Morphological Reconstruction
+### ~~T2-06. Morphological Reconstruction~~ DONE
 - **Category:** `binary` (morphology)
 - **Type:** ImageTransform
 - **Description:** Geodesic reconstruction by dilation or erosion. Fundamental building block for h-maxima, h-minima, regional maxima/minima, fill holes, and many advanced morphological operations.
@@ -471,7 +493,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** Vincent, "Morphological Grayscale Reconstruction in Image Analysis: Applications and Efficient Algorithms", IEEE Trans. Image Processing, 2(2), 1993.
 
-### T2-07. Richardson-Lucy Deconvolution
+### ~~T2-07. Richardson-Lucy Deconvolution~~ DONE
 - **Category:** `fft` (deconvolution)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Iterative maximum-likelihood deconvolution restoring images blurred by a known PSF. Each iteration multiplies current estimate by correction factor from observed/re-blurred ratio. Essential for sensor PSF correction.
@@ -487,7 +509,7 @@ Each ported processor must:
 - **Dependencies:** numpy (np.fft), scipy
 - **References:** Richardson (1972); Lucy (1974).
 
-### T2-08. Wiener Filter Deconvolution
+### ~~T2-08. Wiener Filter Deconvolution~~ DONE
 - **Category:** `fft` (deconvolution)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Frequency-domain deconvolution dividing image spectrum by PSF spectrum, regularized by noise-to-signal ratio to avoid noise amplification.
@@ -502,7 +524,7 @@ Each ported processor must:
 - **Dependencies:** numpy (np.fft)
 - **References:** Wiener (1949); Gonzalez & Woods, "Digital Image Processing", Chapter 5.
 
-### T2-09. Hough Transform (Lines and Circles)
+### ~~T2-09. Hough Transform (Lines and Circles)~~ DONE
 - **Category:** `find_maxima` (feature detection)
 - **Type:** ImageTransform
 - **Description:** Detects lines and circles in edge images by mapping edge points to parameter space and finding peaks corresponding to geometric primitives. Useful for infrastructure detection (roads, buildings).
@@ -520,7 +542,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** Duda & Hart (1972); Yuen et al. (1990).
 
-### T2-10. Ridge Detection (Steger's Algorithm)
+### ~~T2-10. Ridge Detection (Steger's Algorithm)~~ DONE
 - **Category:** `edges` (feature detection)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Detects curvilinear structures (ridges, valleys, lines) using Hessian eigenvalues with sub-pixel position extraction. Superior to edge detection for line-like features (roads, rivers, coastlines).
@@ -537,7 +559,7 @@ Each ported processor must:
 - **Dependencies:** numpy, scipy.ndimage
 - **References:** Steger, "An Unbiased Detector of Curvilinear Structures", IEEE PAMI, 20(2), 1998.
 
-### T2-11. Sliding Paraboloid Background
+### ~~T2-11. Sliding Paraboloid Background~~ DONE
 - **Category:** `background`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Background subtraction using sliding paraboloid algorithm. The default method in modern ImageJ (alternative to rolling ball). Slides a parabolic surface under/over the intensity profile in 4 directions.
@@ -551,7 +573,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** Sternberg, "Biomedical Image Processing", IEEE Computer, 16(1), 1983.
 
-### T2-12. Extended Min/Max and H-Minima/H-Maxima
+### ~~T2-12. Extended Min/Max and H-Minima/H-Maxima~~ DONE
 - **Category:** `segmentation` (morphology)
 - **Type:** ImageTransform
 - **Description:** Finds extended (regional) minima/maxima suppressed to dynamic height h. H-minima suppresses shallow minima (preventing over-segmentation in watershed). Building block for robust segmentation.
@@ -566,7 +588,7 @@ Each ported processor must:
 - **Dependencies:** numpy; depends on Morphological Reconstruction (T2-06)
 - **References:** Soille, "Morphological Image Analysis", Springer, 2nd ed., 2003.
 
-### T2-13. FFT Custom Filter
+### ~~T2-13. FFT Custom Filter~~ DONE
 - **Category:** `fft`
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Applies user-defined frequency-domain filter mask via FFT. Allows arbitrary spatial frequency filtering beyond simple bandpass. Hanning window option to reduce edge artifacts.
@@ -581,7 +603,7 @@ Each ported processor must:
 - **Dependencies:** numpy (np.fft)
 - **References:** ImageJ source code (public domain).
 
-### T2-14. Template Matching (Normalized Cross-Correlation)
+### ~~T2-14. Template Matching (Normalized Cross-Correlation)~~ DONE
 - **Category:** `fft` (registration)
 - **Type:** ImageTransform
 - **Description:** Locates template pattern within larger image using normalized cross-correlation (NCC). Returns correlation map where peaks indicate template locations. Useful for target detection and change detection.
@@ -596,7 +618,7 @@ Each ported processor must:
 - **Dependencies:** numpy (np.fft)
 - **References:** Lewis, "Fast Normalized Cross-Correlation", Vision Interface, 1995.
 
-### T2-15. Morphological Gradient (External/Internal/Beucher)
+### ~~T2-15. Morphological Gradient (External/Internal/Beucher)~~ DONE
 - **Category:** `binary` (morphology)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Morphological gradient as difference between dilation and erosion. Internal gradient (original - erosion), external gradient (dilation - original), Beucher gradient (dilation - erosion).
@@ -611,7 +633,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `MorphologicalFilter`
 - **References:** Serra, "Image Analysis and Mathematical Morphology", Academic Press, 1982.
 
-### T2-16. Morphological Laplacian
+### ~~T2-16. Morphological Laplacian~~ DONE
 - **Category:** `binary` (morphology)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Morphological analog of Laplacian: (dilation + erosion - 2 × original). Highlights rapid intensity changes using non-linear morphological operations.
@@ -625,7 +647,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `MorphologicalFilter`
 - **References:** Serra (1982); Soille (2003).
 
-### T2-17. Directional Filtering (MorphoLibJ)
+### ~~T2-17. Directional Filtering (MorphoLibJ)~~ DONE
 - **Category:** `binary` (morphology)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Morphological operations using oriented line structuring elements at multiple angles. Detects and enhances linear structures at specific orientations. Valuable for road/river detection.
@@ -641,7 +663,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `MorphologicalFilter`
 - **References:** Soille, Breen & Jones, "Recursive Implementation of Erosions and Dilations Along Discrete Lines at Arbitrary Angles", IEEE PAMI, 18(5), 1996.
 
-### T2-18. Kill Borders (MorphoLibJ)
+### ~~T2-18. Kill Borders (MorphoLibJ)~~ DONE
 - **Category:** `binary` (morphology)
 - **Type:** ImageTransform
 - **Description:** Removes all connected components touching the image border. Eliminates partial objects at image edges before measurement. Works on binary and labeled images.
@@ -654,7 +676,7 @@ Each ported processor must:
 - **Dependencies:** numpy; depends on Morphological Reconstruction (T2-06)
 - **References:** Soille (2003).
 
-### T2-19. Granulometry (MorphoLibJ)
+### ~~T2-19. Granulometry (MorphoLibJ)~~ DONE
 - **Category:** `analyze` (morphology)
 - **Type:** ImageTransform
 - **Description:** Size distribution analysis by applying morphological openings with increasing SE size and measuring residual. Produces size distribution curve characterizing object sizes.
@@ -670,7 +692,7 @@ Each ported processor must:
 - **Dependencies:** numpy; reuses existing `MorphologicalFilter`
 - **References:** Matheron, "Random Sets and Integral Geometry", Wiley, 1975.
 
-### T2-20. ROF Total Variation Denoising
+### ~~T2-20. ROF Total Variation Denoising~~ DONE
 - **Category:** `noise` (denoising)
 - **Type:** ImageTransform (BandwiseTransformMixin)
 - **Description:** Rudin-Osher-Fatemi total variation regularization. Minimizes total variation while maintaining fidelity to noisy input. Piecewise-smooth results with sharp edges. Complementary to AnisotropicDiffusion.
@@ -685,7 +707,7 @@ Each ported processor must:
 - **Dependencies:** numpy
 - **References:** Rudin, Osher & Fatemi, "Nonlinear Total Variation Based Noise Removal Algorithms", Physica D, 60(1-4), 1992.
 
-### T2-21. Color Deconvolution
+### ~~T2-21. Color Deconvolution~~ DONE
 - **Category:** `enhance` (spectral)
 - **Type:** ImageTransform
 - **Description:** Separates multi-stain/multi-spectral imagery into individual channel contributions using a known mixing matrix. Based on Beer-Lambert law. Directly applicable to spectral unmixing in remote sensing.
@@ -700,7 +722,7 @@ Each ported processor must:
 - **Dependencies:** numpy (np.linalg.inv)
 - **References:** Ruifrok & Johnston, "Quantification of histochemical staining by color deconvolution", Analytical and Quantitative Cytology and Histology, 23(4), 2001.
 
-### T2-22. Tamura Texture Features
+### ~~T2-22. Tamura Texture Features~~ DONE
 - **Category:** `analyze` (texture)
 - **Type:** ImageTransform
 - **Description:** Perceptually motivated texture features: coarseness, contrast, and directionality. Designed to correspond to human texture perception. Useful for texture-based retrieval and classification.

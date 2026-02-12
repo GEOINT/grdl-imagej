@@ -2046,9 +2046,9 @@ class TestModuleExports:
             )
 
     def test_all_list_matches_init(self):
-        """__all__ in grdl_imagej/__init__.py should have 22 entries."""
+        """__all__ in grdl_imagej/__init__.py should have 64 entries."""
         import grdl_imagej as ij_module
-        assert len(ij_module.__all__) == 42
+        assert len(ij_module.__all__) == 64
 
 
 # ============================================================================
@@ -2098,6 +2098,28 @@ class TestModuleExports:
     ('PhaseCorrelation', '1.0.0'),
     ('ColorSpaceConverter', '1.54j'),
     ('WhiteBalance', '1.0.0'),
+    ('GLCMHaralick', '0.40.0'),
+    ('NonLocalMeans', '1.0.0'),
+    ('StructureTensor', '2.0.0'),
+    ('FrangiVesselness', '0.40.0'),
+    ('MarkerControlledWatershed', '1.6.0'),
+    ('MorphologicalReconstruction', '1.6.0'),
+    ('RichardsonLucy', '0.40.0'),
+    ('WienerFilter', '0.40.0'),
+    ('HoughTransform', '1.0.0'),
+    ('RidgeDetection', '1.4.0'),
+    ('SlidingParaboloid', '1.54j'),
+    ('ExtendedMinMax', '1.6.0'),
+    ('FFTCustomFilter', '1.54j'),
+    ('TemplateMatching', '0.40.0'),
+    ('MorphologicalGradient', '1.6.0'),
+    ('MorphologicalLaplacian', '1.6.0'),
+    ('DirectionalFilter', '1.6.0'),
+    ('KillBorders', '1.6.0'),
+    ('Granulometry', '1.6.0'),
+    ('ROFDenoise', '0.40.0'),
+    ('ColorDeconvolution', '3.0.0'),
+    ('TamuraTexture', '0.40.0'),
 ])
 def test_imagej_version_attribute(class_name, expected_version):
     """All ImageJ components have correct __processor_version__."""
@@ -3065,3 +3087,1217 @@ class TestWhiteBalance:
         wb = WhiteBalance()
         with pytest.raises(ValueError, match="3-channel"):
             wb.apply(np.zeros((20, 20)))
+
+
+# ============================================================================
+# GLCMHaralick Tests
+# ============================================================================
+
+class TestGLCMHaralick:
+    """Tests for GLCM / Haralick Texture Features."""
+
+    def test_output_shape_all_features(self):
+        """All features mode returns (H, W, 7) stack."""
+        from grdl_imagej import GLCMHaralick
+        glcm = GLCMHaralick(features='all')
+        image = np.random.RandomState(42).rand(30, 30) * 255
+        result = glcm.apply(image)
+        assert result.shape == (30, 30, 7)
+        assert result.dtype == np.float64
+
+    def test_output_shape_single_feature(self):
+        """Single feature returns (H, W) image."""
+        from grdl_imagej import GLCMHaralick
+        glcm = GLCMHaralick(features='contrast')
+        image = np.random.RandomState(42).rand(30, 30) * 255
+        result = glcm.apply(image)
+        assert result.shape == (30, 30)
+
+    def test_energy_of_uniform_image(self):
+        """Uniform image should have high energy (all co-occurrences same pair)."""
+        from grdl_imagej import GLCMHaralick
+        glcm = GLCMHaralick(features='energy', n_gray_levels=32)
+        flat = np.full((30, 30), 100.0)
+        result = glcm.apply(flat)
+        assert result[0, 0] > 0.9  # Nearly 1.0 for uniform
+
+    def test_contrast_of_uniform_is_zero(self):
+        """Uniform image should have zero contrast."""
+        from grdl_imagej import GLCMHaralick
+        glcm = GLCMHaralick(features='contrast', n_gray_levels=32)
+        flat = np.full((30, 30), 100.0)
+        result = glcm.apply(flat)
+        assert abs(result[0, 0]) < 1e-10
+
+    def test_entropy_of_uniform_is_zero(self):
+        """Uniform image should have zero entropy."""
+        from grdl_imagej import GLCMHaralick
+        glcm = GLCMHaralick(features='entropy', n_gray_levels=32)
+        flat = np.full((20, 20), 100.0)
+        result = glcm.apply(flat)
+        assert abs(result[0, 0]) < 1e-10
+
+    def test_all_angles(self):
+        """All four angles should produce a valid result."""
+        from grdl_imagej import GLCMHaralick
+        image = np.random.RandomState(42).rand(20, 20) * 255
+        for angle in ['0', '45', '90', '135', 'all']:
+            glcm = GLCMHaralick(angle=angle, features='contrast')
+            result = glcm.apply(image)
+            assert result.shape == (20, 20), f"Failed for angle={angle}"
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import GLCMHaralick
+        glcm = GLCMHaralick()
+        with pytest.raises(ValueError, match="2D"):
+            glcm.apply(np.zeros((3, 10, 10)))
+
+    def test_unknown_feature_raises(self):
+        from grdl_imagej import GLCMHaralick
+        glcm = GLCMHaralick(features='nonexistent')
+        with pytest.raises(ValueError, match="Unknown feature"):
+            glcm.apply(np.random.RandomState(0).rand(10, 10))
+
+    def test_multiple_features(self):
+        """Comma-separated features should work."""
+        from grdl_imagej import GLCMHaralick
+        glcm = GLCMHaralick(features='contrast,entropy')
+        image = np.random.RandomState(42).rand(20, 20) * 255
+        result = glcm.apply(image)
+        assert result.shape == (20, 20, 2)
+
+
+# ============================================================================
+# NonLocalMeans Tests
+# ============================================================================
+
+class TestNonLocalMeans:
+    """Tests for Non-Local Means Denoising."""
+
+    def test_reduces_noise(self):
+        """NLM should reduce noise in homogeneous regions."""
+        from grdl_imagej import NonLocalMeans
+        rng = np.random.RandomState(42)
+        clean = np.full((30, 30), 100.0)
+        noisy = clean + rng.randn(30, 30) * 20
+        nlm = NonLocalMeans(sigma=20.0, patch_radius=2, search_radius=5)
+        result = nlm.apply(noisy)
+        # Interior should be smoother
+        assert np.std(result[5:25, 5:25]) < np.std(noisy[5:25, 5:25])
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import NonLocalMeans
+        nlm = NonLocalMeans(sigma=10.0, patch_radius=1, search_radius=5)
+        image = np.random.RandomState(42).rand(20, 20) * 255
+        result = nlm.apply(image)
+        assert result.shape == (20, 20)
+        assert result.dtype == np.float64
+
+    def test_flat_image_unchanged(self):
+        """A flat image should remain flat."""
+        from grdl_imagej import NonLocalMeans
+        nlm = NonLocalMeans(sigma=10.0, patch_radius=1, search_radius=5)
+        flat = np.full((20, 20), 100.0)
+        result = nlm.apply(flat)
+        assert np.allclose(result, 100.0, atol=0.1)
+
+    def test_h_parameter(self):
+        """Explicit h should override sigma for filtering strength."""
+        from grdl_imagej import NonLocalMeans
+        rng = np.random.RandomState(42)
+        noisy = np.full((20, 20), 100.0) + rng.randn(20, 20) * 30
+        # Large h = stronger smoothing
+        nlm_strong = NonLocalMeans(sigma=30.0, h=100.0, patch_radius=1, search_radius=5)
+        nlm_weak = NonLocalMeans(sigma=30.0, h=5.0, patch_radius=1, search_radius=5)
+        strong = nlm_strong.apply(noisy)
+        weak = nlm_weak.apply(noisy)
+        assert np.std(strong[3:17, 3:17]) < np.std(weak[3:17, 3:17])
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import NonLocalMeans
+        nlm = NonLocalMeans()
+        with pytest.raises(ValueError, match="2D"):
+            nlm.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# StructureTensor Tests
+# ============================================================================
+
+class TestStructureTensor:
+    """Tests for Structure Tensor / Orientation Analysis."""
+
+    def test_output_all_shape(self):
+        """'all' mode returns (H, W, 3) stack."""
+        from grdl_imagej import StructureTensor
+        st = StructureTensor(sigma=2.0, output='all')
+        image = np.random.RandomState(42).rand(30, 30)
+        result = st.apply(image)
+        assert result.shape == (30, 30, 3)
+
+    def test_output_orientation_shape(self):
+        from grdl_imagej import StructureTensor
+        st = StructureTensor(output='orientation')
+        image = np.random.RandomState(42).rand(30, 30)
+        result = st.apply(image)
+        assert result.shape == (30, 30)
+
+    def test_output_coherence_shape(self):
+        from grdl_imagej import StructureTensor
+        st = StructureTensor(output='coherence')
+        image = np.random.RandomState(42).rand(30, 30)
+        result = st.apply(image)
+        assert result.shape == (30, 30)
+
+    def test_output_energy_shape(self):
+        from grdl_imagej import StructureTensor
+        st = StructureTensor(output='energy')
+        image = np.random.RandomState(42).rand(30, 30)
+        result = st.apply(image)
+        assert result.shape == (30, 30)
+
+    def test_coherence_high_for_edges(self):
+        """Step edge should produce high coherence along edge."""
+        from grdl_imagej import StructureTensor
+        st = StructureTensor(sigma=2.0, output='coherence')
+        image = np.zeros((40, 80))
+        image[:, 40:] = 200.0
+        result = st.apply(image)
+        # High coherence near the edge
+        assert np.max(result[:, 35:45]) > 0.5
+
+    def test_orientation_of_vertical_edge(self):
+        """Vertical step edge should produce ~0 orientation (horizontal gradient)."""
+        from grdl_imagej import StructureTensor
+        st = StructureTensor(sigma=2.0, output='orientation')
+        image = np.zeros((40, 80))
+        image[:, 40:] = 200.0
+        result = st.apply(image)
+        # Near the edge center, orientation should be close to 0
+        edge_orientations = result[15:25, 38:42]
+        assert np.max(np.abs(edge_orientations)) < 0.5  # radians, near 0
+
+    def test_flat_image_low_energy(self):
+        """Flat image should produce near-zero energy."""
+        from grdl_imagej import StructureTensor
+        st = StructureTensor(sigma=2.0, output='energy')
+        flat = np.full((30, 30), 100.0)
+        result = st.apply(flat)
+        assert np.max(result) < 0.01
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import StructureTensor
+        st = StructureTensor()
+        with pytest.raises(ValueError, match="2D"):
+            st.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# FrangiVesselness Tests
+# ============================================================================
+
+class TestFrangiVesselness:
+    """Tests for Frangi Vesselness / Tubeness Filter."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import FrangiVesselness
+        fv = FrangiVesselness(scale_min=1.0, scale_max=2.0)
+        image = np.random.RandomState(42).rand(30, 30) * 255
+        result = fv.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_detects_dark_line(self):
+        """A dark line on bright background should produce high vesselness."""
+        from grdl_imagej import FrangiVesselness
+        fv = FrangiVesselness(scale_min=1.0, scale_max=3.0, black_ridges=True)
+        image = np.full((50, 50), 200.0)
+        image[23:27, 10:40] = 50.0  # Dark horizontal line
+        result = fv.apply(image)
+        # Vesselness should be high along the line
+        assert result[25, 25] > 0
+
+    def test_detects_bright_line(self):
+        """A bright line on dark background should be detected with black_ridges=False."""
+        from grdl_imagej import FrangiVesselness
+        fv = FrangiVesselness(scale_min=1.0, scale_max=3.0, black_ridges=False)
+        image = np.zeros((50, 50))
+        image[23:27, 10:40] = 200.0  # Bright horizontal line
+        result = fv.apply(image)
+        assert result[25, 25] > 0
+
+    def test_flat_image_zero_vesselness(self):
+        """Flat image should produce zero vesselness."""
+        from grdl_imagej import FrangiVesselness
+        fv = FrangiVesselness(scale_min=1.0, scale_max=2.0)
+        flat = np.full((30, 30), 100.0)
+        result = fv.apply(flat)
+        assert np.allclose(result, 0.0, atol=1e-10)
+
+    def test_non_negative(self):
+        """Vesselness should be non-negative."""
+        from grdl_imagej import FrangiVesselness
+        fv = FrangiVesselness(scale_min=1.0, scale_max=3.0)
+        image = np.random.RandomState(42).rand(30, 30) * 255
+        result = fv.apply(image)
+        assert np.all(result >= 0)
+
+    def test_scale_min_gt_max_raises(self):
+        from grdl_imagej import FrangiVesselness
+        fv = FrangiVesselness(scale_min=10.0, scale_max=2.0)
+        with pytest.raises(ValueError, match="scale_min"):
+            fv.apply(np.random.RandomState(0).rand(20, 20))
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import FrangiVesselness
+        fv = FrangiVesselness()
+        with pytest.raises(ValueError, match="2D"):
+            fv.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# MarkerControlledWatershed Tests
+# ============================================================================
+
+class TestMarkerControlledWatershed:
+    """Tests for Marker-Controlled Watershed Segmentation."""
+
+    def test_two_markers_two_regions(self):
+        """Two markers on a two-region image should produce two labeled basins."""
+        from grdl_imagej import MarkerControlledWatershed
+        mcw = MarkerControlledWatershed(connectivity=4, use_gradient=False)
+        image = np.zeros((20, 40))
+        image[:, 20:] = 200.0
+        markers = np.zeros((20, 40), dtype=np.int32)
+        markers[10, 5] = 1   # Left region marker
+        markers[10, 35] = 2  # Right region marker
+        result = mcw.apply(image, markers=markers)
+        assert result.dtype == np.int32
+        assert 1 in result
+        assert 2 in result
+
+    def test_output_shape(self):
+        from grdl_imagej import MarkerControlledWatershed
+        mcw = MarkerControlledWatershed()
+        image = np.random.RandomState(42).rand(20, 20)
+        markers = np.zeros((20, 20), dtype=np.int32)
+        markers[5, 5] = 1
+        markers[15, 15] = 2
+        result = mcw.apply(image, markers=markers)
+        assert result.shape == (20, 20)
+
+    def test_single_marker_fills_all(self):
+        """A single marker should fill the entire image."""
+        from grdl_imagej import MarkerControlledWatershed
+        mcw = MarkerControlledWatershed(connectivity=8, use_gradient=False)
+        image = np.ones((15, 15))
+        markers = np.zeros((15, 15), dtype=np.int32)
+        markers[7, 7] = 1
+        result = mcw.apply(image, markers=markers)
+        assert np.all(result == 1)
+
+    def test_gradient_mode(self):
+        """use_gradient=True should still produce valid labels."""
+        from grdl_imagej import MarkerControlledWatershed
+        mcw = MarkerControlledWatershed(connectivity=4, use_gradient=True)
+        image = np.random.RandomState(42).rand(20, 20) * 255
+        markers = np.zeros((20, 20), dtype=np.int32)
+        markers[3, 3] = 1
+        markers[17, 17] = 2
+        result = mcw.apply(image, markers=markers)
+        assert 1 in result
+        assert 2 in result
+
+    def test_connectivity_8(self):
+        """8-connectivity should also work."""
+        from grdl_imagej import MarkerControlledWatershed
+        mcw = MarkerControlledWatershed(connectivity=8)
+        image = np.random.RandomState(42).rand(15, 15)
+        markers = np.zeros((15, 15), dtype=np.int32)
+        markers[3, 3] = 1
+        markers[12, 12] = 2
+        result = mcw.apply(image, markers=markers)
+        assert result.shape == (15, 15)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import MarkerControlledWatershed
+        mcw = MarkerControlledWatershed()
+        with pytest.raises(ValueError, match="2D"):
+            mcw.apply(np.zeros((3, 10, 10)), markers=np.zeros((3, 10, 10)))
+
+    def test_missing_markers_raises(self):
+        from grdl_imagej import MarkerControlledWatershed
+        mcw = MarkerControlledWatershed()
+        with pytest.raises(ValueError, match="markers"):
+            mcw.apply(np.zeros((10, 10)))
+
+    def test_shape_mismatch_raises(self):
+        from grdl_imagej import MarkerControlledWatershed
+        mcw = MarkerControlledWatershed()
+        with pytest.raises(ValueError, match="shape"):
+            mcw.apply(np.zeros((10, 10)), markers=np.zeros((5, 5), dtype=np.int32))
+
+
+# ============================================================================
+# MorphologicalReconstruction Tests
+# ============================================================================
+
+class TestMorphologicalReconstruction:
+    """Tests for Morphological Reconstruction (geodesic)."""
+
+    def test_dilation_output_shape_and_dtype(self):
+        from grdl_imagej import MorphologicalReconstruction
+        mr = MorphologicalReconstruction(type='by_dilation')
+        mask = np.random.RandomState(42).rand(20, 20) * 200
+        marker = mask * 0.5
+        result = mr.apply(mask, marker=marker)
+        assert result.shape == (20, 20)
+        assert result.dtype == np.float64
+
+    def test_dilation_bounded_by_mask(self):
+        """Reconstruction by dilation should never exceed the mask."""
+        from grdl_imagej import MorphologicalReconstruction
+        mr = MorphologicalReconstruction(type='by_dilation', connectivity=8)
+        mask = np.random.RandomState(42).rand(15, 15) * 200
+        marker = mask * 0.3
+        result = mr.apply(mask, marker=marker)
+        assert np.all(result <= mask + 1e-10)
+
+    def test_erosion_bounded_by_mask(self):
+        """Reconstruction by erosion should never go below the mask."""
+        from grdl_imagej import MorphologicalReconstruction
+        mr = MorphologicalReconstruction(type='by_erosion', connectivity=4)
+        mask = np.random.RandomState(42).rand(15, 15) * 200
+        marker = mask + 50
+        result = mr.apply(mask, marker=marker)
+        assert np.all(result >= mask - 1e-10)
+
+    def test_marker_equals_mask_identity(self):
+        """When marker == mask, reconstruction should return mask."""
+        from grdl_imagej import MorphologicalReconstruction
+        mr = MorphologicalReconstruction(type='by_dilation')
+        mask = np.random.RandomState(42).rand(15, 15) * 200
+        result = mr.apply(mask, marker=mask.copy())
+        np.testing.assert_allclose(result, mask, atol=1e-10)
+
+    def test_missing_marker_raises(self):
+        from grdl_imagej import MorphologicalReconstruction
+        mr = MorphologicalReconstruction()
+        with pytest.raises(ValueError, match="marker"):
+            mr.apply(np.zeros((10, 10)))
+
+    def test_shape_mismatch_raises(self):
+        from grdl_imagej import MorphologicalReconstruction
+        mr = MorphologicalReconstruction()
+        with pytest.raises(ValueError, match="shape"):
+            mr.apply(np.zeros((10, 10)), marker=np.zeros((5, 5)))
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import MorphologicalReconstruction
+        mr = MorphologicalReconstruction()
+        with pytest.raises(ValueError, match="2D"):
+            mr.apply(np.zeros((3, 10, 10)), marker=np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# RichardsonLucy Tests
+# ============================================================================
+
+class TestRichardsonLucy:
+    """Tests for Richardson-Lucy Deconvolution."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import RichardsonLucy
+        rl = RichardsonLucy(n_iterations=5)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        psf = np.zeros((5, 5))
+        psf[2, 2] = 1.0  # Delta PSF
+        result = rl.apply(image, psf=psf)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_delta_psf_identity(self):
+        """Delta PSF should approximately recover the input."""
+        from grdl_imagej import RichardsonLucy
+        rl = RichardsonLucy(n_iterations=5)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        psf = np.zeros((3, 3))
+        psf[1, 1] = 1.0
+        result = rl.apply(image, psf=psf)
+        np.testing.assert_allclose(result, image, rtol=0.1, atol=5.0)
+
+    def test_nonnegative_output(self):
+        """Output should be non-negative."""
+        from grdl_imagej import RichardsonLucy
+        rl = RichardsonLucy(n_iterations=10)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        psf = np.ones((3, 3)) / 9.0
+        result = rl.apply(image, psf=psf)
+        assert np.all(result >= 0.0)
+
+    def test_missing_psf_raises(self):
+        from grdl_imagej import RichardsonLucy
+        rl = RichardsonLucy()
+        with pytest.raises(ValueError, match="psf"):
+            rl.apply(np.zeros((10, 10)))
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import RichardsonLucy
+        rl = RichardsonLucy()
+        with pytest.raises(ValueError, match="2D"):
+            rl.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# WienerFilter Tests
+# ============================================================================
+
+class TestWienerFilter:
+    """Tests for Wiener Filter Deconvolution."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import WienerFilter
+        wf = WienerFilter(snr=10.0)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        psf = np.zeros((3, 3))
+        psf[1, 1] = 1.0
+        result = wf.apply(image, psf=psf)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_delta_psf_identity(self):
+        """Delta PSF with high SNR should recover input."""
+        from grdl_imagej import WienerFilter
+        wf = WienerFilter(snr=100.0, clip_negative=False)
+        image = np.random.RandomState(42).rand(32, 32) * 200
+        psf = np.zeros((3, 3))
+        psf[1, 1] = 1.0
+        result = wf.apply(image, psf=psf)
+        np.testing.assert_allclose(result, image, rtol=0.05, atol=5.0)
+
+    def test_clip_negative(self):
+        """clip_negative=True should have no negative values."""
+        from grdl_imagej import WienerFilter
+        wf = WienerFilter(snr=5.0, clip_negative=True)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        psf = np.ones((3, 3)) / 9.0
+        result = wf.apply(image, psf=psf)
+        assert np.all(result >= 0.0)
+
+    def test_missing_psf_raises(self):
+        from grdl_imagej import WienerFilter
+        wf = WienerFilter()
+        with pytest.raises(ValueError, match="psf"):
+            wf.apply(np.zeros((10, 10)))
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import WienerFilter
+        wf = WienerFilter()
+        with pytest.raises(ValueError, match="2D"):
+            wf.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# HoughTransform Tests
+# ============================================================================
+
+class TestHoughTransform:
+    """Tests for Hough Transform."""
+
+    def test_lines_output_shape(self):
+        from grdl_imagej import HoughTransform
+        ht = HoughTransform(mode='lines', theta_resolution=1.0)
+        edge = np.zeros((50, 50))
+        edge[25, :] = 1.0  # Horizontal line
+        result = ht.apply(edge)
+        assert result.ndim == 2
+        assert result.shape[1] == 180  # 180 theta bins at 1 deg resolution
+
+    def test_lines_detects_horizontal_line(self):
+        """Horizontal line should produce accumulator peak."""
+        from grdl_imagej import HoughTransform
+        ht = HoughTransform(mode='lines', threshold=0.3)
+        edge = np.zeros((50, 50))
+        edge[25, 5:45] = 1.0
+        result = ht.apply(edge)
+        assert result.max() > 0
+
+    def test_circles_output_shape(self):
+        from grdl_imagej import HoughTransform
+        ht = HoughTransform(mode='circles', min_radius=5, max_radius=10)
+        edge = np.zeros((30, 30))
+        result = ht.apply(edge)
+        assert result.shape == (30, 30)
+
+    def test_circles_detects_circle(self):
+        """Circle edge image should produce accumulator peak at center."""
+        from grdl_imagej import HoughTransform
+        ht = HoughTransform(mode='circles', min_radius=8, max_radius=12)
+        edge = np.zeros((50, 50))
+        # Draw a circle edge
+        for angle in np.linspace(0, 2 * np.pi, 100):
+            y = int(25 + 10 * np.sin(angle))
+            x = int(25 + 10 * np.cos(angle))
+            if 0 <= y < 50 and 0 <= x < 50:
+                edge[y, x] = 1.0
+        result = ht.apply(edge)
+        # Peak should be near center (25, 25)
+        assert result[23:28, 23:28].max() > 0
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import HoughTransform
+        ht = HoughTransform()
+        with pytest.raises(ValueError, match="2D"):
+            ht.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# RidgeDetection Tests
+# ============================================================================
+
+class TestRidgeDetection:
+    """Tests for Ridge Detection (Steger's algorithm)."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import RidgeDetection
+        rd = RidgeDetection(sigma=2.0, lower_threshold=1.0, upper_threshold=3.0)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = rd.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_binary_output(self):
+        """Output should be binary (0 or 1)."""
+        from grdl_imagej import RidgeDetection
+        rd = RidgeDetection(sigma=2.0, lower_threshold=1.0, upper_threshold=3.0)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = rd.apply(image)
+        unique = set(np.unique(result))
+        assert unique.issubset({0.0, 1.0})
+
+    def test_detects_bright_line(self):
+        """Should detect a bright thin line."""
+        from grdl_imagej import RidgeDetection
+        rd = RidgeDetection(sigma=1.5, lower_threshold=0.5, upper_threshold=1.0,
+                            darkline=False)
+        image = np.zeros((50, 50))
+        image[25, 10:40] = 200.0  # Thin bright line
+        result = rd.apply(image)
+        assert result[25, 25] == 1.0 or result.sum() > 0
+
+    def test_flat_image_no_ridges(self):
+        """Flat image should have no ridges."""
+        from grdl_imagej import RidgeDetection
+        rd = RidgeDetection(sigma=2.0, lower_threshold=1.0, upper_threshold=3.0)
+        flat = np.full((30, 30), 100.0)
+        result = rd.apply(flat)
+        assert result.sum() == 0.0
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import RidgeDetection
+        rd = RidgeDetection()
+        with pytest.raises(ValueError, match="2D"):
+            rd.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# SlidingParaboloid Tests
+# ============================================================================
+
+class TestSlidingParaboloid:
+    """Tests for Sliding Paraboloid Background Subtraction."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import SlidingParaboloid
+        sp = SlidingParaboloid(radius=20.0)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = sp.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_nonnegative_output(self):
+        """Background-subtracted result should be non-negative."""
+        from grdl_imagej import SlidingParaboloid
+        sp = SlidingParaboloid(radius=20.0)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = sp.apply(image)
+        assert np.all(result >= -1e-10)
+
+    def test_flat_image_near_zero(self):
+        """Flat image after background subtraction should be near zero."""
+        from grdl_imagej import SlidingParaboloid
+        sp = SlidingParaboloid(radius=20.0)
+        flat = np.full((30, 30), 100.0)
+        result = sp.apply(flat)
+        assert np.max(result) < 1.0
+
+    def test_corrects_gradient(self):
+        """Should flatten a linear gradient."""
+        from grdl_imagej import SlidingParaboloid
+        sp = SlidingParaboloid(radius=30.0)
+        rows, cols = 60, 60
+        gradient = np.tile(np.linspace(50, 200, cols), (rows, 1))
+        result = sp.apply(gradient)
+        assert result.std() < gradient.std()
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import SlidingParaboloid
+        sp = SlidingParaboloid()
+        with pytest.raises(ValueError, match="2D"):
+            sp.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# ExtendedMinMax Tests
+# ============================================================================
+
+class TestExtendedMinMax:
+    """Tests for Extended Min/Max and H-Minima/Maxima."""
+
+    def test_h_minima_output_shape(self):
+        from grdl_imagej import ExtendedMinMax
+        emm = ExtendedMinMax(type='h_minima', h=5.0)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = emm.apply(image)
+        assert result.shape == (20, 20)
+        assert result.dtype == np.float64
+
+    def test_h_maxima_output_shape(self):
+        from grdl_imagej import ExtendedMinMax
+        emm = ExtendedMinMax(type='h_maxima', h=5.0)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = emm.apply(image)
+        assert result.shape == (20, 20)
+
+    def test_h_minima_suppresses_shallow_minima(self):
+        """H-minima should fill in minima shallower than h."""
+        from grdl_imagej import ExtendedMinMax
+        emm = ExtendedMinMax(type='h_minima', h=30.0, connectivity=8)
+        image = np.full((20, 20), 100.0)
+        image[10, 10] = 80.0  # Shallow minimum (depth=20 < h=30)
+        result = emm.apply(image)
+        # Shallow minimum should be filled
+        assert result[10, 10] > 80.0
+
+    def test_regional_minima_binary(self):
+        """Regional minima output should be binary."""
+        from grdl_imagej import ExtendedMinMax
+        emm = ExtendedMinMax(type='regional_minima')
+        image = np.random.RandomState(42).rand(15, 15) * 200
+        result = emm.apply(image)
+        unique = set(np.unique(result))
+        assert unique.issubset({0.0, 1.0})
+
+    def test_regional_maxima_binary(self):
+        """Regional maxima output should be binary."""
+        from grdl_imagej import ExtendedMinMax
+        emm = ExtendedMinMax(type='regional_maxima')
+        image = np.random.RandomState(42).rand(15, 15) * 200
+        result = emm.apply(image)
+        unique = set(np.unique(result))
+        assert unique.issubset({0.0, 1.0})
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import ExtendedMinMax
+        emm = ExtendedMinMax()
+        with pytest.raises(ValueError, match="2D"):
+            emm.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# FFTCustomFilter Tests
+# ============================================================================
+
+class TestFFTCustomFilter:
+    """Tests for FFT Custom Filter."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import FFTCustomFilter
+        filt = FFTCustomFilter(window='none', pad_to_power_of_2=False)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        mask = np.ones((30, 30))
+        result = filt.apply(image, mask=mask)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_identity_mask(self):
+        """All-ones mask should approximately preserve the image."""
+        from grdl_imagej import FFTCustomFilter
+        filt = FFTCustomFilter(window='none', pad_to_power_of_2=False)
+        image = np.random.RandomState(42).rand(32, 32) * 200
+        mask = np.ones((32, 32))
+        result = filt.apply(image, mask=mask)
+        np.testing.assert_allclose(result, image, atol=1e-8)
+
+    def test_zero_mask_gives_zero(self):
+        """All-zeros mask should give zero output."""
+        from grdl_imagej import FFTCustomFilter
+        filt = FFTCustomFilter(window='none', pad_to_power_of_2=False)
+        image = np.random.RandomState(42).rand(32, 32) * 200
+        mask = np.zeros((32, 32))
+        result = filt.apply(image, mask=mask)
+        np.testing.assert_allclose(result, 0.0, atol=1e-8)
+
+    def test_window_types_run(self):
+        """All window types should run without error."""
+        from grdl_imagej import FFTCustomFilter
+        image = np.random.RandomState(42).rand(16, 16) * 200
+        mask = np.ones((16, 16))
+        for win in ['none', 'hanning', 'hamming', 'blackman']:
+            filt = FFTCustomFilter(window=win, pad_to_power_of_2=False)
+            result = filt.apply(image, mask=mask)
+            assert result.shape == (16, 16), f"Failed for window={win}"
+
+    def test_missing_mask_raises(self):
+        from grdl_imagej import FFTCustomFilter
+        filt = FFTCustomFilter()
+        with pytest.raises(ValueError, match="mask"):
+            filt.apply(np.zeros((10, 10)))
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import FFTCustomFilter
+        filt = FFTCustomFilter()
+        with pytest.raises(ValueError, match="2D"):
+            filt.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# TemplateMatching Tests
+# ============================================================================
+
+class TestTemplateMatching:
+    """Tests for Template Matching."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import TemplateMatching
+        tm = TemplateMatching(method='zncc')
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        template = image[10:15, 10:15].copy()
+        result = tm.apply(image, template=template)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_self_match_peak(self):
+        """Template from the image should produce a peak at the right location."""
+        from grdl_imagej import TemplateMatching
+        tm = TemplateMatching(method='zncc')
+        rng = np.random.RandomState(42)
+        image = rng.rand(40, 40) * 200
+        template = image[15:20, 15:20].copy()
+        result = tm.apply(image, template=template)
+        # Peak should be near (17, 17) - center of template region
+        peak_pos = np.unravel_index(np.argmax(result), result.shape)
+        assert abs(peak_pos[0] - 17) < 3
+        assert abs(peak_pos[1] - 17) < 3
+
+    def test_ssd_method_runs(self):
+        from grdl_imagej import TemplateMatching
+        tm = TemplateMatching(method='ssd')
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        template = np.random.RandomState(0).rand(5, 5) * 200
+        result = tm.apply(image, template=template)
+        assert result.shape == (30, 30)
+
+    def test_ncc_method_runs(self):
+        from grdl_imagej import TemplateMatching
+        tm = TemplateMatching(method='ncc')
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        template = np.random.RandomState(0).rand(5, 5) * 200
+        result = tm.apply(image, template=template)
+        assert result.shape == (30, 30)
+
+    def test_missing_template_raises(self):
+        from grdl_imagej import TemplateMatching
+        tm = TemplateMatching()
+        with pytest.raises(ValueError, match="template"):
+            tm.apply(np.zeros((10, 10)))
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import TemplateMatching
+        tm = TemplateMatching()
+        with pytest.raises(ValueError, match="2D"):
+            tm.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# MorphologicalGradient Tests
+# ============================================================================
+
+class TestMorphologicalGradient:
+    """Tests for Morphological Gradient."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import MorphologicalGradient
+        mg = MorphologicalGradient(type='beucher', se_radius=1)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = mg.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_flat_image_zero_gradient(self):
+        """Flat image should have zero morphological gradient."""
+        from grdl_imagej import MorphologicalGradient
+        mg = MorphologicalGradient(type='beucher', se_radius=1)
+        flat = np.full((20, 20), 100.0)
+        result = mg.apply(flat)
+        np.testing.assert_allclose(result, 0.0, atol=1e-10)
+
+    def test_beucher_nonnegative(self):
+        """Beucher gradient (dilate - erode) should be non-negative."""
+        from grdl_imagej import MorphologicalGradient
+        mg = MorphologicalGradient(type='beucher', se_radius=1)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = mg.apply(image)
+        assert np.all(result >= -1e-10)
+
+    def test_internal_gradient(self):
+        """Internal gradient = original - eroded, should be non-negative."""
+        from grdl_imagej import MorphologicalGradient
+        mg = MorphologicalGradient(type='internal', se_radius=1)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = mg.apply(image)
+        assert np.all(result >= -1e-10)
+
+    def test_external_gradient(self):
+        """External gradient = dilated - original, should be non-negative."""
+        from grdl_imagej import MorphologicalGradient
+        mg = MorphologicalGradient(type='external', se_radius=1)
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        result = mg.apply(image)
+        assert np.all(result >= -1e-10)
+
+    def test_beucher_equals_internal_plus_external(self):
+        """Beucher = internal + external gradient."""
+        from grdl_imagej import MorphologicalGradient
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        b = MorphologicalGradient(type='beucher', se_radius=1).apply(image)
+        i = MorphologicalGradient(type='internal', se_radius=1).apply(image)
+        e = MorphologicalGradient(type='external', se_radius=1).apply(image)
+        np.testing.assert_allclose(b, i + e, atol=1e-10)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import MorphologicalGradient
+        mg = MorphologicalGradient()
+        with pytest.raises(ValueError, match="2D"):
+            mg.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# MorphologicalLaplacian Tests
+# ============================================================================
+
+class TestMorphologicalLaplacian:
+    """Tests for Morphological Laplacian."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import MorphologicalLaplacian
+        ml = MorphologicalLaplacian(se_radius=1)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = ml.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_flat_image_zero(self):
+        """Flat image should have zero Laplacian."""
+        from grdl_imagej import MorphologicalLaplacian
+        ml = MorphologicalLaplacian(se_radius=1)
+        flat = np.full((20, 20), 100.0)
+        result = ml.apply(flat)
+        np.testing.assert_allclose(result, 0.0, atol=1e-10)
+
+    def test_edge_response(self):
+        """Should have non-zero response at step edges."""
+        from grdl_imagej import MorphologicalLaplacian
+        ml = MorphologicalLaplacian(se_radius=1)
+        image = np.zeros((30, 60))
+        image[:, 30:] = 200.0
+        result = ml.apply(image)
+        # Edge region should have non-zero Laplacian
+        assert np.max(np.abs(result[:, 28:32])) > 0
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import MorphologicalLaplacian
+        ml = MorphologicalLaplacian()
+        with pytest.raises(ValueError, match="2D"):
+            ml.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# DirectionalFilter Tests
+# ============================================================================
+
+class TestDirectionalFilter:
+    """Tests for Directional Morphological Filtering."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import DirectionalFilter
+        df = DirectionalFilter(n_directions=4, line_length=5, operation='opening')
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = df.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_flat_image_unchanged(self):
+        """Flat image should be unchanged by opening."""
+        from grdl_imagej import DirectionalFilter
+        df = DirectionalFilter(n_directions=4, line_length=5, operation='opening')
+        flat = np.full((20, 20), 100.0)
+        result = df.apply(flat)
+        np.testing.assert_allclose(result, 100.0, atol=0.01)
+
+    def test_all_operations_run(self):
+        from grdl_imagej import DirectionalFilter
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        for op in ['opening', 'closing', 'erosion', 'dilation']:
+            df = DirectionalFilter(n_directions=4, line_length=5, operation=op)
+            result = df.apply(image)
+            assert result.shape == (20, 20), f"Failed for {op}"
+
+    def test_all_combinations_run(self):
+        from grdl_imagej import DirectionalFilter
+        image = np.random.RandomState(42).rand(20, 20) * 200
+        for combo in ['max', 'mean', 'median']:
+            df = DirectionalFilter(n_directions=4, line_length=5, combination=combo)
+            result = df.apply(image)
+            assert result.shape == (20, 20), f"Failed for {combo}"
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import DirectionalFilter
+        df = DirectionalFilter()
+        with pytest.raises(ValueError, match="2D"):
+            df.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# KillBorders Tests
+# ============================================================================
+
+class TestKillBorders:
+    """Tests for Kill Borders (remove border-touching components)."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import KillBorders
+        kb = KillBorders(connectivity=8)
+        image = np.zeros((20, 20))
+        image[5:15, 5:15] = 1.0
+        result = kb.apply(image)
+        assert result.shape == (20, 20)
+        assert result.dtype == np.float64
+
+    def test_keeps_interior_object(self):
+        """Object not touching border should be preserved."""
+        from grdl_imagej import KillBorders
+        kb = KillBorders(connectivity=8)
+        image = np.zeros((20, 20))
+        image[5:15, 5:15] = 200.0  # Interior object
+        result = kb.apply(image)
+        assert result[10, 10] > 0
+
+    def test_removes_border_object(self):
+        """Object touching the border should be removed."""
+        from grdl_imagej import KillBorders
+        kb = KillBorders(connectivity=8)
+        image = np.zeros((20, 20))
+        image[0:5, 0:5] = 200.0  # Touches top-left corner
+        result = kb.apply(image)
+        assert result[2, 2] == 0.0
+
+    def test_empty_image_unchanged(self):
+        from grdl_imagej import KillBorders
+        kb = KillBorders()
+        result = kb.apply(np.zeros((15, 15)))
+        assert result.sum() == 0.0
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import KillBorders
+        kb = KillBorders()
+        with pytest.raises(ValueError, match="2D"):
+            kb.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# Granulometry Tests
+# ============================================================================
+
+class TestGranulometry:
+    """Tests for Granulometry (size distribution)."""
+
+    def test_output_shape(self):
+        from grdl_imagej import Granulometry
+        g = Granulometry(max_radius=5, step=1)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = g.apply(image)
+        assert result.ndim == 2
+        assert result.shape[0] == 1
+        assert result.shape[1] == 5  # radii 1,2,3,4,5
+
+    def test_distribution_sums_to_one(self):
+        """Size distribution should sum to approximately 1."""
+        from grdl_imagej import Granulometry
+        g = Granulometry(max_radius=5, step=1)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = g.apply(image)
+        assert abs(result.sum() - 1.0) < 0.01
+
+    def test_nonnegative_distribution(self):
+        from grdl_imagej import Granulometry
+        g = Granulometry(max_radius=5, step=1)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = g.apply(image)
+        assert np.all(result >= -1e-10)
+
+    def test_step_parameter(self):
+        """Step=2 should produce half as many bins."""
+        from grdl_imagej import Granulometry
+        g1 = Granulometry(max_radius=10, step=1)
+        g2 = Granulometry(max_radius=10, step=2)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        r1 = g1.apply(image)
+        r2 = g2.apply(image)
+        assert r1.shape[1] == 10
+        assert r2.shape[1] == 5
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import Granulometry
+        g = Granulometry()
+        with pytest.raises(ValueError, match="2D"):
+            g.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# ROFDenoise Tests
+# ============================================================================
+
+class TestROFDenoise:
+    """Tests for ROF Total Variation Denoising."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import ROFDenoise
+        rof = ROFDenoise(lambda_=0.1, n_iterations=20)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = rof.apply(image)
+        assert result.shape == (30, 30)
+        assert result.dtype == np.float64
+
+    def test_reduces_noise(self):
+        """ROF should reduce noise in flat regions."""
+        from grdl_imagej import ROFDenoise
+        rof = ROFDenoise(lambda_=0.05, n_iterations=50, dt=0.125)
+        rng = np.random.RandomState(42)
+        clean = np.full((40, 40), 100.0)
+        noisy = clean + rng.randn(40, 40) * 20
+        result = rof.apply(noisy)
+        assert np.std(result[5:35, 5:35]) < np.std(noisy[5:35, 5:35])
+
+    def test_flat_image_unchanged(self):
+        """Flat image should remain flat."""
+        from grdl_imagej import ROFDenoise
+        rof = ROFDenoise(lambda_=0.1, n_iterations=50)
+        flat = np.full((20, 20), 100.0)
+        result = rof.apply(flat)
+        np.testing.assert_allclose(result, 100.0, atol=1.0)
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import ROFDenoise
+        rof = ROFDenoise()
+        with pytest.raises(ValueError, match="2D"):
+            rof.apply(np.zeros((3, 10, 10)))
+
+
+# ============================================================================
+# ColorDeconvolution Tests
+# ============================================================================
+
+class TestColorDeconvolution:
+    """Tests for Color Deconvolution / Spectral Unmixing."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import ColorDeconvolution
+        cd = ColorDeconvolution(stain_preset='H_E')
+        image = np.random.RandomState(42).rand(20, 20, 3) * 200
+        result = cd.apply(image)
+        assert result.shape == (20, 20, 3)
+        assert result.dtype == np.float64
+
+    def test_custom_matrix(self):
+        """Custom stain matrix should work."""
+        from grdl_imagej import ColorDeconvolution
+        cd = ColorDeconvolution(stain_preset='custom')
+        matrix = np.eye(3)
+        image = np.random.RandomState(42).rand(20, 20, 3) * 200
+        result = cd.apply(image, stain_matrix=matrix)
+        assert result.shape == (20, 20, 3)
+
+    def test_all_presets_run(self):
+        from grdl_imagej import ColorDeconvolution
+        image = np.random.RandomState(42).rand(15, 15, 3) * 200
+        for preset in ['H_E', 'H_DAB', 'FastRed_FastBlue']:
+            cd = ColorDeconvolution(stain_preset=preset)
+            result = cd.apply(image)
+            assert result.shape == (15, 15, 3), f"Failed for {preset}"
+
+    def test_missing_custom_matrix_raises(self):
+        from grdl_imagej import ColorDeconvolution
+        cd = ColorDeconvolution(stain_preset='custom')
+        with pytest.raises(ValueError, match="stain_matrix"):
+            cd.apply(np.random.RandomState(0).rand(10, 10, 3))
+
+    def test_rejects_non_3channel(self):
+        from grdl_imagej import ColorDeconvolution
+        cd = ColorDeconvolution(stain_preset='H_E')
+        with pytest.raises(ValueError, match="3-channel"):
+            cd.apply(np.zeros((20, 20)))
+
+
+# ============================================================================
+# TamuraTexture Tests
+# ============================================================================
+
+class TestTamuraTexture:
+    """Tests for Tamura Texture Features."""
+
+    def test_output_shape_and_dtype(self):
+        from grdl_imagej import TamuraTexture
+        tt = TamuraTexture(n_scales=3)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = tt.apply(image)
+        assert result.shape == (30, 30, 3)
+        assert result.dtype == np.float64
+
+    def test_uniform_values(self):
+        """Global features should be spatially uniform."""
+        from grdl_imagej import TamuraTexture
+        tt = TamuraTexture(n_scales=3)
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = tt.apply(image)
+        for c in range(3):
+            assert result[:, :, c].std() < 1e-10
+
+    def test_coarseness_nonnegative(self):
+        from grdl_imagej import TamuraTexture
+        tt = TamuraTexture()
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = tt.apply(image)
+        assert result[0, 0, 0] >= 0  # Coarseness
+
+    def test_contrast_zero_for_uniform(self):
+        """Uniform image should have zero contrast."""
+        from grdl_imagej import TamuraTexture
+        tt = TamuraTexture()
+        flat = np.full((30, 30), 100.0)
+        result = tt.apply(flat)
+        assert result[0, 0, 1] == 0.0  # Contrast
+
+    def test_directionality_in_range(self):
+        """Directionality should be in [0, 1]."""
+        from grdl_imagej import TamuraTexture
+        tt = TamuraTexture()
+        image = np.random.RandomState(42).rand(30, 30) * 200
+        result = tt.apply(image)
+        assert 0.0 <= result[0, 0, 2] <= 1.0
+
+    def test_rejects_non_2d(self):
+        from grdl_imagej import TamuraTexture
+        tt = TamuraTexture()
+        with pytest.raises(ValueError, match="2D"):
+            tt.apply(np.zeros((3, 10, 10)))

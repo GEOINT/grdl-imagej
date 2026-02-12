@@ -2,5 +2,10 @@
 from grdl_imagej.noise.anisotropic_diffusion import AnisotropicDiffusion
 from grdl_imagej.noise.bilateral_filter import BilateralFilter
 from grdl_imagej.noise.noise_generator import NoiseGenerator
+from grdl_imagej.noise.non_local_means import NonLocalMeans
+from grdl_imagej.noise.rof_denoise import ROFDenoise
 
-__all__ = ['AnisotropicDiffusion', 'BilateralFilter', 'NoiseGenerator']
+__all__ = [
+    'AnisotropicDiffusion', 'BilateralFilter', 'NoiseGenerator',
+    'NonLocalMeans', 'ROFDenoise',
+]

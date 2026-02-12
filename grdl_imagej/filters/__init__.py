@@ -1,4 +1,4 @@
-"""ImageJ Process > Filters - Rank-order, smoothing, sharpening, and convolution filters."""
+"""ImageJ Process > Filters - Rank-order, smoothing, sharpening, convolution, and feature filters."""
 from grdl_imagej.filters.rank_filters import RankFilters
 from grdl_imagej.filters.unsharp_mask import UnsharpMask
 from grdl_imagej.filters.gaussian_blur import GaussianBlur
@@ -12,10 +12,11 @@ from grdl_imagej.filters.entropy_filter import EntropyFilter
 from grdl_imagej.filters.kuwahara import KuwaharaFilter
 from grdl_imagej.filters.local_binary_patterns import LocalBinaryPatterns
 from grdl_imagej.filters.gabor_filter_bank import GaborFilterBank
+from grdl_imagej.filters.frangi_vesselness import FrangiVesselness
 
 __all__ = [
     'RankFilters', 'UnsharpMask', 'GaussianBlur', 'Convolver',
     'DifferenceOfGaussians', 'Shadows', 'Smooth', 'Sharpen',
     'VarianceFilter', 'EntropyFilter', 'KuwaharaFilter',
-    'LocalBinaryPatterns', 'GaborFilterBank',
+    'LocalBinaryPatterns', 'GaborFilterBank', 'FrangiVesselness',
 ]
