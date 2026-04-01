@@ -46,8 +46,14 @@ dev = [
 [project.urls]
 Repository = "https://github.com/geoint-org/grdl-imagej"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 include = ["grdl_imagej*"]
+
+[tool.setuptools.data-files]
+"share/grdl-imagej" = ["README.md", "LICENSE"]
 
 [tool.pytest.ini_options]
 addopts = "-p no:faulthandler"
