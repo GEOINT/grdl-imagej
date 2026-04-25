@@ -43,6 +43,7 @@ Modified
 """
 
 # Standard library
+import dataclasses
 from typing import Annotated, Any
 
 # Third-party
@@ -119,6 +120,13 @@ class StructureTensor(BandwiseTransformMixin, ImageTransform):
                      Desc('Gaussian window for tensor smoothing')] = 2.0
     output: Annotated[str, Options(*OUTPUT_MODES),
                       Desc('Output type')] = 'all'
+
+    def execute(self, metadata: 'ImageMetadata', source: np.ndarray, **kwargs: Any) -> tuple:
+        """Execute structure tensor analysis, ensuring YXC metadata for multi-band outputs."""
+        p = self._resolve_params(kwargs)
+        if p['output'] == 'all':
+            metadata = dataclasses.replace(metadata, axis_order='YXC')
+        return super().execute(metadata, source, **kwargs)
 
     def apply(self, source: np.ndarray, **kwargs: Any) -> np.ndarray:
         """Compute structure tensor features.

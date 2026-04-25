@@ -42,6 +42,7 @@ Modified
 """
 
 # Standard library
+import dataclasses
 from typing import Annotated, Any
 
 # Third-party
@@ -247,6 +248,17 @@ class GLCMHaralick(ImageTransform):
                              Desc('Quantization levels')] = 64
     symmetric: Annotated[bool, Desc('Symmetric GLCM')] = True
     features: Annotated[str, Desc('Comma-separated features or "all"')] = 'all'
+
+    def execute(self, metadata: 'ImageMetadata', source: np.ndarray, **kwargs: Any) -> tuple:
+        """Execute GLCM Haralick analysis, ensuring YXC metadata for multi-band outputs."""
+        p = self._resolve_params(kwargs)
+        feat_str = p['features'].strip()
+        is_multiband = feat_str == 'all' or ',' in feat_str
+
+        if is_multiband:
+            metadata = dataclasses.replace(metadata, axis_order='YXC')
+
+        return super().execute(metadata, source, **kwargs)
 
     def apply(self, source: np.ndarray, **kwargs: Any) -> np.ndarray:
         """Compute GLCM-based Haralick texture features.

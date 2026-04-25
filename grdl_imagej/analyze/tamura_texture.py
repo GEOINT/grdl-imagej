@@ -40,6 +40,7 @@ Modified
 """
 
 # Standard library
+import dataclasses
 from typing import Annotated, Any
 
 # Third-party
@@ -192,6 +193,11 @@ class TamuraTexture(ImageTransform):
                         Desc('Number of scales for coarseness')] = 5
     histogram_bins: Annotated[int, Range(min=16, max=128),
                               Desc('Bins for directionality histogram')] = 64
+
+    def execute(self, metadata: 'ImageMetadata', source: np.ndarray, **kwargs: Any) -> tuple:
+        """Execute Tamura texture analysis, ensuring YXC metadata for the 3-band output."""
+        metadata = dataclasses.replace(metadata, axis_order='YXC')
+        return super().execute(metadata, source, **kwargs)
 
     def apply(self, source: np.ndarray, **kwargs: Any) -> np.ndarray:
         """Compute Tamura texture features.
