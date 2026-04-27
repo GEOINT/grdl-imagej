@@ -24,7 +24,8 @@ pip install -e ".[dev]"
 
 ## Dependencies
 
-- **grdl** >= 0.1.0 (base classes, versioning, `Annotated` parameter system, vocabulary enums)
+- **grdl** >= 0.5.1
+ (base classes, versioning, `Annotated` parameter system, vocabulary enums)
 - **numpy** >= 1.20.0
 - **scipy** >= 1.7.0
 
